@@ -1,0 +1,5 @@
+{
+    "scripts": {
+        "serve": "bash -c \"start chrome $(realpath \"./checklist.html\")\" && node app"
+    }
+}

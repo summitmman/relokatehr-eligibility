@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <style>
+        .lds-ellipsis {
+            /* display: inline-block; */
+            margin: 80px auto;
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+        .lds-ellipsis div {
+            position: absolute;
+            top: 33px;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: #444;
+            animation-timing-function: cubic-bezier(0, 1, 1, 0);
+        }
+        .lds-ellipsis div:nth-child(1) {
+            left: 8px;
+            animation: lds-ellipsis1 0.6s infinite;
+        }
+        .lds-ellipsis div:nth-child(2) {
+            left: 8px;
+            animation: lds-ellipsis2 0.6s infinite;
+        }
+        .lds-ellipsis div:nth-child(3) {
+            left: 32px;
+            animation: lds-ellipsis2 0.6s infinite;
+        }
+        .lds-ellipsis div:nth-child(4) {
+            left: 56px;
+            animation: lds-ellipsis3 0.6s infinite;
+        }
+        @keyframes lds-ellipsis1 {
+            0% {
+                transform: scale(0);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        @keyframes lds-ellipsis3 {
+            0% {
+                transform: scale(1);
+            }
+            100% {
+                transform: scale(0);
+            }
+        }
+        @keyframes lds-ellipsis2 {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(24px, 0);
+            }
+        }
+    </style>
+    <style>
+        .myfade {
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .myfade-in {
+            opacity: 1;
+        }
+        .cursor-pointer {
+            cursor: pointer;
+        }
+        .back-section {
+            height: 16px;
+            margin-top: 10px;
+        }
+        .progress {
+            display: inline-block;
+            position: absolute;
+            height: 6px;
+            border-radius: 10px;
+        }
+        .height-6 {
+            height: 6px;
+        }
+        .progress-back {
+            background-color: #AAA;
+        }
+        .progress-bar {
+            background-color: #444;
+        }
+        .position-relative {
+            position: relative;
+        }
+        .step-section {
+            height: 42px;
+            margin-top: 20px;
+        }
+        .step-no {
+            font-size: small;
+        }
+        .margin-top-20 {
+            margin-top: 20px;
+        }
+        .form-prompt {
+            margin-top: 15px;
+        }
+        .form-label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="quizApp" class="container">
+        <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
+    </div>
+
+    <script src="https://kit.fontawesome.com/6f2a26d215.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <script>
+        const animationTime = 300;
+
+        const useComponents = () => {
+            // MAPPING
+            const components = {
+                text: "text",
+                select: "select",
+                radio: "radio",
+                paragraph: "paragraph"
+            };
+
+            // UTILS
+            const createElement = (el, parent) => {
+                const element = document.createElement(el);
+                parent.appendChild(element);
+                return element;
+            };
+
+            // COMPONENTS
+            const createPrompt = (str, parent, type="success") => {
+                const prompt = createElement("div", parent);
+                prompt.setAttribute("role", "alert");
+                prompt.classList.add("alert", `alert-${type}`);
+                prompt.innerHTML = str;
+                return prompt;
+            };
+            const createButton = (str, parent) => {
+                const buttonEl = createElement("button", parent);
+                buttonEl.classList.add("btn", "btn-primary");
+                buttonEl.setAttribute("type", "button");
+                buttonEl.innerHTML = str;  
+                return buttonEl;
+            };
+
+            // FORM COMPONENTS
+            const createText = (item, parent) => {
+                const input = createElement("input", parent);
+                input.classList.add('form-control');
+                input.setAttribute("type", "text");
+                input.setAttribute("id", item.id);
+                if (item.props) {
+                    if (item.props.placeholder) {
+                        input.setAttribute("placeholder", item.props.placeholder);
+                    }
+                }
+                return input;
+            };
+            const createParagraph = (item, parent) => {
+                const input = createElement("textarea", parent);
+                input.classList.add('form-control');
+                input.setAttribute("id", item.id);
+                if (item.props) {
+                    if (item.props.placeholder) {
+                        input.setAttribute("placeholder", item.props.placeholder);
+                    }
+                    input.setAttribute("rows", item.props.rows ?? 5);
+                }
+                return input;
+            };
+            const createSelect = (item, parent) => {
+                const select = createElement("select", parent);
+                select.setAttribute("id", item.id);
+                select.classList.add('form-select');
+                item.props.options.forEach((optionItem) => {
+                    const option = createElement("option", select);
+                    option.setAttribute("value", optionItem.value);
+                    option.innerHTML = optionItem.label;
+                });
+                return select;
+            };
+            const createRadio = (item, parent) => {
+                const radioGroup = [];
+                item.props.options.forEach((optionItem, index) => {
+                    const radioDiv = createElement("div", parent);
+                    radioGroup.push(radioDiv);
+                    radioDiv.classList.add("form-check");
+
+                    const radioEl = createElement("input", radioDiv);
+                    radioEl.classList.add("form-check-input");
+                    radioEl.setAttribute("type", "radio");
+                    radioEl.setAttribute("name", item.id);
+                    radioEl.setAttribute("id", `${item.id}${index}`);
+                    radioEl.setAttribute("value", optionItem.value);
+
+                    const label = createElement("label", radioDiv);
+                    label.classList.add("form-check-label");
+                    label.setAttribute("for", `${item.id}${index}`);
+                    label.innerHTML = optionItem.label;
+                });
+                return radioGroup;
+            };
+
+            // CONFIG RENDERERS
+            const createInput = (item, parent) => {
+                switch(item.type) {
+                    case components.text: {
+                        return createText(item, parent);
+                        break;
+                    }
+                    case components.paragraph: {
+                        return createParagraph(item, parent);
+                        break;
+                    }
+                    case components.select: {
+                        return createSelect(item, parent);
+                        break;
+                    }
+                    case components.radio: {
+                        return createRadio(item, parent);
+                        break;
+                    }
+                    default: {
+                        return createText(item, parent);
+                        break;
+                    }
+                }
+            };
+            const renderQuestion = (question, parent) => {
+                const qParentDiv = createElement('div', parent);
+                qParentDiv.classList.add('mb-3');
+                const qDiv = createElement('label', qParentDiv);
+                qDiv.setAttribute('for', question.id);
+                qDiv.classList.add('form-label');
+                qDiv.innerHTML = question.question;
+
+                createInput(question, qParentDiv);
+
+                if (question.prompt) {
+                    const promptEl = createPrompt(question.prompt, qParentDiv);
+                    promptEl.classList.add("form-prompt");
+                }
+            };
+
+            // LIBRARY RETURN
+            return {
+                components,
+                createElement,
+                createButton,
+                createPrompt,
+                renderQuestion,
+            };
+        };
+        
+
+        (() => {
+            const app = document.getElementById("quizApp");
+            if (!app)
+                return;
+
+            const {
+                components,
+                createElement,
+                createButton,
+                renderQuestion
+            } = useComponents();
+            
+            const forms = [
+                // {
+                //     id: "personal_details",
+                //     name: "Personal Details",
+                //     title: "Personal Details",
+                //     questions: [
+                //         {
+                //             id: "surname",
+                //             question: "Surname",
+                //             type: components.text
+                //         },
+                //         {
+                //             id: "givenName",
+                //             question: "Given Name",
+                //             type: components.text
+                //         },
+                //         {
+                //             id: "nationality",
+                //             question: "Nationality",
+                //             type: components.select,
+                //             options: [
+                //                 "India",
+                //                 "Germany"
+                //             ]
+                //         },
+                //         {
+                //             id: "residence",
+                //             question: "Current place of residence",
+                //             type: components.text
+                //         },
+                //         {
+                //             id: "expertise",
+                //             question: "Primary area of expertise",
+                //             type: components.text
+                //         },
+                //         {
+                //             id: "professionalExperience",
+                //             question: "Total professional experience",
+                //             type: components.text
+                //         },
+                //         {
+                //             id: "educationLevel",
+                //             question: "Highest level of education attained",
+                //             type: components.select,
+                //             options: [
+                //                 "Bachelors",
+                //                 "Masters"
+                //             ]
+                //         },
+                //         {
+                //             id: "educationCountry",
+                //             question: "Country of degree attainment",
+                //             type: components.select,
+                //             options: [
+                //                 "India",
+                //                 "Germany"
+                //             ]
+                //         },
+                //         {
+                //             id: "university",
+                //             question: "Complete University name",
+                //             type: components.select,
+                //             options: [
+                //                 "Mumbai University",
+                //                 "Cambridge"
+                //             ]
+                //         },
+                //         {
+                //             id: "degree",
+                //             question: "Complete degree name",
+                //             type: components.select,
+                //             options: [
+                //                 "Master of Computer Application",
+                //                 "Master of Business Administration"
+                //             ]
+                //         },
+                //         {
+                //             id: "recognition",
+                //             question: "Has your university degree been officially recognized in Germany?",
+                //             type: components.select,
+                //             options: [
+                //                 "Yes",
+                //                 "No"
+                //             ]
+                //         },
+                //         {
+                //             id: "germanEmployment",
+                //             question: "Do you currently hold an employment contract or a confirmed job offer in Germany?",
+                //             type: components.select,
+                //             options: [
+                //                 "Yes",
+                //                 "No"
+                //             ]
+                //         },
+                //         {
+                //             id: "germanCompanyList",
+                //             question: "If yes, list company name and contact person",
+                //             type: components.text // This should be a textarea
+                //         },
+                //         {
+                //             id: "expectedIncome",
+                //             question: "Anticipated Gross Income for the Intended Job",
+                //             prompt: `
+                //                 For IT professionals and bottleneck professions - eligible
+                //                 For Blue card if salary is €39,682.80 or above - eligible
+                //                 For other regular occupations they are eligible for Blue Card if salary is €43,800 or above - eligible
+                //             `,
+                //             type: components.text
+                //         }
+                //     ]
+                // },
+                // {
+                //     id: "",
+                //     name: "Personal",
+                //     title: "Tell us about yourself",
+                //     questions: [
+                //         {
+                //             id: "familyName",
+                //             question: "Family Name",
+                //             type: components.text
+                //         }
+                //     ]
+                // },
+                // {
+                //     id: "",
+                //     name: "Personal",
+                //     title: "Tell us about yourself",
+                //     questions: [
+                //         {
+                //             id: "givenName",
+                //             question: "Given Name",
+                //             type: components.text
+                //         }
+                //     ]
+                // },
+                {
+                    id: "personalDetails",
+                    name: "Personal Details",
+                    title: "Personal Details",
+                    questions: [
+                        {
+                            id: "surname",
+                            question: "Surname",
+                            type: components.text,
+                            props: {
+                                placeholder: "Enter your surname"
+                            }
+                        },
+                        {
+                            id: "givenName",
+                            question: "Given Name",
+                            type: components.text,
+                            props: {
+                                placeholder: "Enter your given name"
+                            }
+                        },
+                        {
+                            id: "nationality",
+                            question: "Nationality",
+                            type: components.select,
+                            props: {
+                                placeholder: "Select your nationality",
+                                options: [
+                                    { label: "India", value: 129 },
+                                    { label: "Germany", value: 14 }
+                                ]
+                            }
+                        },
+                        {
+                            id: "dualCitizenship",
+                            question: "Posesses Dual Citizenship",
+                            type: components.radio,
+                            props: {
+                                options: [
+                                    { label: "Yes", value: "Yes" },
+                                    { label: "No", value: "No" },
+                                ]
+                            }
+                            
+                        },
+                        {
+                            id: "citizenshipList",
+                            question: "If yes, please list",
+                            type: components.paragraph,
+                            props: {
+                                placeholder: "List of citizenships"
+                            }
+                        },
+                    ]
+                },
+                {
+                    id: "residenceDetails",
+                    name: "Residence Details",
+                    title: "Residence and travel information",
+                    questions: [
+                        {
+                            id: "duration",
+                            question: "Intended duration of residency in Germany",
+                            type: components.text,
+                            props: {
+                                placeholder: "in years"
+                            }
+                        },
+                        {
+                            id: "previousVisit",
+                            question: "Have you previously visited Germany?",
+                            type: components.radio,
+                            props: {
+                                options: [
+                                    { label: "Yes", value: "Yes" },
+                                    { label: "No", value: "No" },
+                                ]
+                            }
+                            
+                        },
+                        {
+                            id: "visitDates",
+                            question: "If yes, please list all dates",
+                            type: components.paragraph,
+                            props: {
+                                placeholder: "enter to and from dates on different lines"
+                            }
+                        },
+                        {
+                            id: "currentResidence",
+                            question: "Current place of residence",
+                            type: components.text,
+                            props: {
+                                placeholder: "Current country and province/state"
+                            }
+                        },
+                    ]
+                },
+                {
+                    id: "professionalDetails",
+                    name: "Professional Details",
+                    title: "Professional background",
+                    questions: [
+                        {
+                            id: "purpose",
+                            question: "Purpose of your visit to Germany",
+                            type: components.text,
+                            props: {
+                                placeholder: "Enter the purpose"
+                            }
+                        },
+                        {
+                            id: "expertise",
+                            question: "Primary area of expertise",
+                            type: components.text,
+                            props: {
+                                placeholder: "industry or field"
+                            }
+                        },
+                        {
+                            id: "interestedPositions",
+                            question: "Positions you are interested in (list five)",
+                            type: components.paragraph,
+                            props: {
+                                placeholder: "list on different lines"
+                            }
+                        },
+                        {
+                            id: "experience",
+                            question: "Total professional experience",
+                            type: components.text,
+                            props: {
+                                placeholder: "in years"
+                            }
+                        },
+                    ]
+                },
+                {
+                    id: "educationDetails",
+                    name: "Education Details",
+                    title: "Educational background",
+                    questions: [
+                        {
+                            id: "educationLevel",
+                            question: "Highest level of education attained",
+                            type: components.select,
+                            props: {
+                                placeholder: "Select level",
+                                options: [
+                                    { label: "Bachelors", value: "Bachelors" },
+                                    { label: "Masters", value: "Masters" },
+                                ]
+                            }
+                        },
+                        {
+                            id: "educationCountry",
+                            question: "Country of degree attainment",
+                            type: components.select,
+                            props: {
+                                placeholder: "Select country",
+                                options: [
+                                    { label: "India", value: 129 },
+                                    { label: "Germany", value: 14 },
+                                ]
+                            }
+                        },
+                        {
+                            id: "university",
+                            question: "Complete University name",
+                            type: components.select,
+                            props: {
+                                placeholder: "Select university name",
+                                options: [
+                                    { label: "Mumbai University", value: 129 },
+                                    { label: "Cambridge", value: 14 },
+                                ]
+                            }
+                        },
+                        {
+                            id: "degree",
+                            question: "Complete degree name",
+                            type: components.select,
+                            props: {
+                                placeholder: "Select degree name",
+                                options: [
+                                    { label: "Master of Computer Application", value: 129 },
+                                    { label: "Master of Business Administration", value: 14 },
+                                ]
+                            }
+                        },
+                        {
+                            id: "recognition",
+                            question: "Has your university degree been officially recognized in Germany?",
+                            type: components.radio,
+                            props: {
+                                options: [
+                                    { label: "Yes", value: "Yes" },
+                                    { label: "No", value: "No" },
+                                ]
+                            }
+                        },
+                    ]
+                },
+                {
+                    id: "employmentDetails",
+                    name: "Employment Details",
+                    title: "Employment information",
+                    questions: [
+                        {
+                            id: "germanEmployment",
+                            question: "Do you currently hold an employment contract or a confirmed job offer in Germany?",
+                            type: components.radio,
+                            props: {
+                                options: [
+                                    { label: "Yes", value: "Yes" },
+                                    { label: "No", value: "No" },
+                                ]
+                            }
+                        },
+                        {
+                            id: "germanCompanyList",
+                            question: "If yes, list company name and contact person",
+                            type: components.paragraph,
+                            props: {
+                                placeholder: "Enter on different lines"
+                            }
+                        },
+                        {
+                            id: "expectedIncome",
+                            question: "Anticipated Gross Income for the Intended Job",
+                            prompt: `
+                                For IT professionals and bottleneck professions - eligible
+                                For Blue card if salary is €39,682.80 or above - eligible
+                                For other regular occupations they are eligible for Blue Card if salary is €43,800 or above - eligible
+                            `,
+                            type: components.text,
+                            props: {
+                                placeholder: "enter amount as per annum",
+                            }
+                        }
+                    ]
+                },
+            ];
+            
+            app.innerHTML = "";
+            const backSection = createElement("div", app);
+            backSection.classList.add('back-section');
+            const stepSection = createElement('div', app);
+            stepSection.classList.add('step-section');
+            const questionSection = createElement("div", app);
+            questionSection.classList.add('myfade', 'margin-top-20');
+            const submitSection = createElement("div", app);
+
+            const onSubmit = (form, index, next) => {
+                // Extract data
+                const output = {};
+                form.questions.forEach(item => {
+                    const input = document.getElementById(item.id);
+                    if (input) {
+                        output[item.id] = input.value;
+                    }
+                });
+                console.log(`Form ${index + 1}:`, output);
+                next();
+            };
+            const onBack = (next) => {
+                next();
+            };
+
+            const renderQuestions = (questions, parent) => {
+                const section = createElement('form', parent);
+                questions.forEach((question) => {
+                    renderQuestion(question, section);
+                });
+            };
+            const renderSteps = (index, total, parent) => {
+                const form = forms[index];
+
+                const stepNo = createElement('div', parent);
+                stepNo.innerHTML = `Step ${index + 1}/${total}`;
+                stepNo.classList.add('step-no');
+                
+                const progressBarDiv = createElement('div', parent);
+                progressBarDiv.classList.add('position-relative', 'height-6');
+                const progressBackground = createElement('span', progressBarDiv);
+                progressBackground.classList.add('progress', 'progress-back');
+                progressBackground.style.width = '100px';
+                const progressBar = createElement('span', progressBarDiv);
+                progressBar.classList.add('progress', 'progress-bar');
+                progressBar.style.width = `${((index + 1)/total) * 100}px`;
+
+                const stepTitle = createElement('div', parent);
+                stepTitle.innerHTML = form.name;
+
+            };
+            const renderForm = (form, index, total) => {
+                // reset 
+                backSection.innerHTML = '';
+                stepSection.innerHTML = '';
+                questionSection.classList.remove('myfade-in');
+                setTimeout(() => {
+                    questionSection.innerHTML = '';
+                }, animationTime);
+                submitSection.innerHTML = '';
+
+                // back section
+                if (index > 0 && index < total) {
+                    const backSpan = createElement('span', backSection);
+                    const backIcon = createElement("i", backSpan);
+                    backIcon.classList.add("fas", "fa-arrow-left");
+                    
+                    backSpan.classList.add('cursor-pointer');
+                    backSpan.addEventListener("click", () => {
+                        onBack(() => {
+                            if (index > 0) {
+                                index--;
+                                renderForm(forms[index], index, total);
+                            }
+                        });
+                    });
+                }
+
+                // step section
+                if (index < total) {
+                    renderSteps(index, total, stepSection);
+                }
+                
+                // question section
+                setTimeout(() => {    
+                    const title = createElement('h3', questionSection);
+                    title.innerHTML = form.title;
+
+                    renderQuestions(form.questions, questionSection);
+                    questionSection.classList.add('myfade-in');
+                }, animationTime);
+
+                // submit section
+                if (index < total) {
+                    const submitBtn = createButton("Submit", submitSection);
+                    submitBtn.addEventListener('click', () => {
+                        onSubmit(form, index, () => {
+                            if (index < (total - 1)) {
+                                index++;
+                                renderForm(forms[index], index, total);
+                            } else {
+                                renderForm({
+                                    id: 'last_question',
+                                    title: 'Thank you for submitting the form',
+                                    questions: []
+                                }, index + 1, total);
+                            }
+                        });
+                    });
+                }
+            };
+
+            renderForm(forms[0], 0, forms.length);
+        })();
+    </script>
+</body>
+</html>

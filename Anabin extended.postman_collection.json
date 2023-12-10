@@ -1,0 +1,151 @@
+{
+	"info": {
+		"_postman_id": "d32169d6-f6d9-492c-aee0-4e4839e89806",
+		"name": "Anabin extended",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "3317859"
+	},
+	"item": [
+		{
+			"name": "degrees",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:3000/degrees?sEcho=1&country=India&countryCode=129&start=0&pageSize=20",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"degrees"
+					],
+					"query": [
+						{
+							"key": "sEcho",
+							"value": "1"
+						},
+						{
+							"key": "country",
+							"value": "India"
+						},
+						{
+							"key": "countryCode",
+							"value": "129"
+						},
+						{
+							"key": "start",
+							"value": "0"
+						},
+						{
+							"key": "pageSize",
+							"value": "20"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "countries",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "localhost:3000/countries"
+			},
+			"response": []
+		},
+		{
+			"name": "universities",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:3000/universities?sEcho=1&country=India&countryCode=129&university=Mumbai&start=0&pageSize=10",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"universities"
+					],
+					"query": [
+						{
+							"key": "sEcho",
+							"value": "1"
+						},
+						{
+							"key": "country",
+							"value": "India"
+						},
+						{
+							"key": "countryCode",
+							"value": "129"
+						},
+						{
+							"key": "university",
+							"value": "Mumbai"
+						},
+						{
+							"key": "start",
+							"value": "0"
+						},
+						{
+							"key": "pageSize",
+							"value": "10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "degreeRecognition",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:3000/degreeRecognition?degreeId=32120",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"degreeRecognition"
+					],
+					"query": [
+						{
+							"key": "degreeId",
+							"value": "32120"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "universityRecognition",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:3000/universityRecognition?universityId=6935",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"universityRecognition"
+					],
+					"query": [
+						{
+							"key": "universityId",
+							"value": "6935"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
