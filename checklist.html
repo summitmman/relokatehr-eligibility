@@ -123,7 +123,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
     <script>
         // @ts-check
-        const animationTime = 300;
 
         const useComponents = () => {
             // MAPPING
@@ -215,7 +214,152 @@
                 return radioGroup;
             };
 
-            // CONFIG RENDERERS
+            // LIBRARY RETURN
+            return {
+                // constants
+                components,
+                // util
+                createElement,
+                // components
+                createButton,
+                createPrompt,
+                // form components
+                createText,
+                createParagraph,
+                createSelect,
+                createRadio
+            };
+        };
+
+        const useValidations = () => {
+            const { components } = useComponents();
+
+            const defaultValidationMessage = 'This field requires attention';
+            const validators = {
+                required: 'required',
+                onlyAlphabets: 'onlyAlphabets'
+            };
+            const validationHelpers = {
+                [validators.required]: (value, options) => {
+                    return !(value == null || value === '');
+                },
+                [validators.onlyAlphabets]: (value, options) => {
+                    return !(/\d/.test(value));
+                }
+            };
+
+            const resetValidations = (question) => {
+                const fieldValidation = document.getElementById(`${question.id}-validation`);
+                if (fieldValidation) {
+                    fieldValidation.innerHTML = defaultValidationMessage;
+                }
+                if (question.type === components.radio) {
+                    const fields = document.getElementsByName(question.id);
+                    if (fields) {
+                        fields.forEach(f => {
+                            f.classList.remove('is-invalid');
+                        });
+                    }
+                } else {
+                    const field = document.getElementById(question.id);
+                    if (field) {
+                        field.classList.remove('is-invalid');
+                    }
+                }
+            };
+            const setValidations = (question, validation) => {
+                if (!validation) {
+                    return;
+                }
+
+                const fieldValidation = document.getElementById(`${question.id}-validation`);
+                if (fieldValidation) {
+                    fieldValidation.innerHTML = validation.message ?? defaultValidationMessage;
+                }
+                if (question.type === components.radio) {
+                    const fields = document.getElementsByName(question.id);
+                    if (fields) {
+                        fields.forEach(f => {
+                            f.classList.add('is-invalid');
+                        });
+                    }
+                } else {
+                    const field = document.getElementById(question.id);
+                    if (field) {
+                        field.classList.add('is-invalid');
+                    }
+                }
+            };
+
+            const isValid = (form, output) => {
+                let result = true;
+                form.questions.forEach(item => {
+                    if (!item.props?.validations?.length) {
+                        return;
+                    }
+                    // reset field validations for each field
+                    resetValidations(item);
+
+                    // run validations in order for a field
+                    const value = output[item.id];
+                    let validation = null;
+                    for (let i = 0; i < item.props.validations.length; i++) {
+                        const localValidation = item.props.validations[i];
+                        const output = validationHelpers[localValidation.type]
+                            ? validationHelpers[localValidation.type](value, localValidation.options)
+                            : true;
+                        if (!output) {
+                            result = false;
+                            validation = localValidation;
+                            break;
+                        }
+                    }
+
+                    // show validation on field ui
+                    setValidations(item, validation);
+                });
+                return result;
+            };
+
+            return {
+                validators,
+                isValid
+            };
+        };
+
+        const useFormRenderer = (
+            forms,
+            {
+                onSubmit = (form, index, next) => {},
+                onBack = (next) => {},
+                onFinalSubmit = ({
+                    backSection,
+                    stepSection,
+                    questionSection,
+                    submitSection
+                }) => {}
+            },
+            app
+        ) => {
+            const {
+                components,
+                createElement,
+                createText,
+                createParagraph,
+                createButton,
+                createSelect,
+                createPrompt,
+                createRadio
+            } = useComponents();
+
+            // HTML elements
+            let backSection = null;
+            let stepSection = null;
+            let questionSection = null;
+            let submitSection = null;
+            
+            const animationTime = 300;
+
             const createInput = (item, parent) => {
                 switch(item.type) {
                     case components.text: {
@@ -248,10 +392,14 @@
                 qDiv.classList.add('form-label');
                 qDiv.innerHTML = question.question;
 
-                createInput(question, qParentDiv);
+                const inputField = createInput(question, qParentDiv);
 
                 if (question.props?.validations?.length) {
-                    const validationDiv = createElement('div', qParentDiv);
+                    let validationParent = qParentDiv;
+                    if (question.type === components.radio) {
+                        validationParent = inputField[inputField.length - 1];
+                    }
+                    const validationDiv = createElement('div', validationParent);
                     validationDiv.setAttribute('id', `${question.id}-validation`);
                     validationDiv.classList.add('invalid-feedback');
                     validationDiv.innerHTML = 'This field required attention';
@@ -262,14 +410,111 @@
                     promptEl.classList.add("form-prompt");
                 }
             };
+            const renderQuestions = ({ id, questions }, parent) => {
+                const section = createElement('form', parent);
+                section.setAttribute("id", id);
+                questions.forEach((question) => {
+                    renderQuestion(question, section);
+                });
+            };
+            const renderSteps = (index, total, parent) => {
+                const form = forms[index];
 
-            // LIBRARY RETURN
+                const stepNo = createElement('div', parent);
+                stepNo.innerHTML = `Step ${index + 1}/${total}`;
+                stepNo.classList.add('step-no');
+                
+                const progressBarDiv = createElement('div', parent);
+                progressBarDiv.classList.add('position-relative', 'height-6');
+                const progressBackground = createElement('span', progressBarDiv);
+                progressBackground.classList.add('progress', 'progress-back');
+                progressBackground.style.width = '100px';
+                const progressBar = createElement('span', progressBarDiv);
+                progressBar.classList.add('progress', 'progress-bar');
+                progressBar.style.width = `${((index + 1)/total) * 100}px`;
+
+                const stepTitle = createElement('div', parent);
+                stepTitle.innerHTML = form.name;
+
+            };
+            const renderForm = (form, index, total) => {
+                // reset
+                backSection.innerHTML = '';
+                stepSection.innerHTML = '';
+                questionSection.classList.remove('myfade-in');
+                setTimeout(() => {
+                    questionSection.innerHTML = '';
+                }, animationTime);
+                submitSection.innerHTML = '';
+
+                // back section
+                if (index > 0 && index < total) {
+                    const backSpan = createElement('span', backSection);
+                    const backIcon = createElement("i", backSpan);
+                    backIcon.classList.add("fas", "fa-arrow-left");
+                    
+                    backSpan.classList.add('cursor-pointer');
+                    backSpan.addEventListener("click", () => {
+                        onBack(() => {
+                            if (index > 0) {
+                                index--;
+                                renderForm(forms[index], index, total);
+                            }
+                        });
+                    });
+                }
+
+                // step section
+                if (index < total) {
+                    renderSteps(index, total, stepSection);
+                }
+                
+                // question section
+                setTimeout(() => {    
+                    const title = createElement('h3', questionSection);
+                    title.innerHTML = form.title;
+
+                    renderQuestions(form, questionSection);
+                    questionSection.classList.add('myfade-in');
+                }, animationTime);
+
+                // submit section
+                if (index < total) {
+                    const submitBtn = createButton("Submit", submitSection);
+                    submitBtn.addEventListener('click', () => {
+                        onSubmit(form, index, () => {
+                            if (index < (total - 1)) {
+                                index++;
+                                renderForm(forms[index], index, total);
+                            } else {
+                                onFinalSubmit({
+                                    backSection,
+                                    stepSection,
+                                    questionSection,
+                                    submitSection
+                                });
+                            }
+                        });
+                    });
+                }
+            };
+            const init = () => {
+                backSection = createElement("div", app);
+                backSection.classList.add('back-section');
+                
+                stepSection = createElement('div', app);
+                stepSection.classList.add('step-section');
+                
+                questionSection = createElement("div", app);
+                questionSection.classList.add('myfade', 'margin-top-20');
+                
+                submitSection = createElement("div", app);
+
+                renderForm(forms[0], 0, forms.length);
+            };
+
             return {
-                components,
-                createElement,
-                createButton,
-                createPrompt,
-                renderQuestion,
+                init
             };
         };
         
@@ -278,13 +523,17 @@
             const app = document.getElementById("quizApp");
             if (!app)
                 return;
+            
+            app.innerHTML = "";
 
             const {
                 components,
                 createElement,
-                createButton,
-                renderQuestion
             } = useComponents();
+            const {
+                validators,
+                isValid
+            } = useValidations();
             
             const forms = [
                 {
@@ -299,8 +548,8 @@
                             props: {
                                 placeholder: "Enter your surname",
                                 validations: [
-                                    { type: 'required', message: 'Please enter your surname' },
-                                    { type: 'onlyAlphabets', message: 'Numbers are not allowed' }
+                                    { type: validators.required, message: 'Please enter your surname' },
+                                    { type: validators.onlyAlphabets, message: 'Numbers are not allowed' }
                                 ],
                             }
                         },
@@ -321,7 +570,10 @@
                                 options: [
                                     { label: "India", value: 129 },
                                     { label: "Germany", value: 14 }
-                                ]
+                                ],
+                                validations: [
+                                    { type: validators.required, message: 'Please select an option' }
+                                ],
                             }
                         },
                         {
@@ -332,7 +584,10 @@
                                 options: [
                                     { label: "Yes", value: "Yes" },
                                     { label: "No", value: "No" },
-                                ]
+                                ],
+                                validations: [
+                                    { type: validators.required, message: 'Please select an option' },
+                                ],
                             }
                         },
                         {
@@ -342,7 +597,7 @@
                             props: {
                                 placeholder: "List of citizenships",
                                 validations: [
-                                    { type: 'required', message: 'Please enter the list citizenships' }
+                                    { type: validators.required, message: 'Please enter the list citizenships' }
                                 ],
                             }
                         },
@@ -536,165 +791,53 @@
                 },
             ];
             
-            app.innerHTML = "";
-            const backSection = createElement("div", app);
-            backSection.classList.add('back-section');
-            const stepSection = createElement('div', app);
-            stepSection.classList.add('step-section');
-            const questionSection = createElement("div", app);
-            questionSection.classList.add('myfade', 'margin-top-20');
-            const submitSection = createElement("div", app);
-
-            const isValid = (form, output) => {
-                let result = true;
-                form.questions.forEach(item => {
-                    // reset field validations
-                    const field = document.getElementById(item.id);
-                    const fieldValidation = document.getElementById(`${item.id}-validation`)
-                    if (field && fieldValidation) {
-                        field.classList.remove('is-invalid');
-                        fieldValidation.innerHTML = 'This field requires attention';
-                    }
-
-                    const value = output[item.id];
-                    
-                    if (item.props?.validations?.length) {
-                        let validation = null;
-                        for (let i = 0; i < item.props.validations.length; i++) {
-                            const localValidation = item.props.validations[i];
-                            if (localValidation.type === 'required') {
-                                if (value == null || value === '') {
-                                    result = false;
-                                    validation = localValidation;
-                                    break;
-                                }
-                            }
-                            if (localValidation.type === 'onlyAlphabets') {
-                                if (/\d/.test(value)) {
-                                    result = false;
-                                    validation = localValidation;
-                                    break;
-                                }
-                            }
-                        }
-                        if (validation && field && fieldValidation) {
-                            field.classList.add('is-invalid');
-                            if (validation.message) {
-                                fieldValidation.innerHTML = validation.message;
-                            }
-                        }
-                    }
-                });
-                return result;
-            };
             const onSubmit = (form, index, next) => {
                 // Extract data
                 const output = {};
                 form.questions.forEach(item => {
-                    const input = document.getElementById(item.id);
+                    let input = document.getElementById(item.id);
+                    if (item.type === components.radio) {
+                        input = document.querySelector(`input[name="${item.id}"]:checked`);
+                    }
                     if (input) {
                         output[item.id] = input.value;
                     }
                 });
-                console.log(`Form ${index + 1}:`, output);
+                console.log(output);
+
                 // Validate data
                 if (isValid(form, output)) {
-                    next();   
+                    next();
                 }
             };
             const onBack = (next) => {
                 next();
             };
-
-            const renderQuestions = ({ id, questions }, parent) => {
-                const section = createElement('form', parent);
-                section.setAttribute("id", id);
-                questions.forEach((question) => {
-                    renderQuestion(question, section);
-                });
-            };
-            const renderSteps = (index, total, parent) => {
-                const form = forms[index];
-
-                const stepNo = createElement('div', parent);
-                stepNo.innerHTML = `Step ${index + 1}/${total}`;
-                stepNo.classList.add('step-no');
-                
-                const progressBarDiv = createElement('div', parent);
-                progressBarDiv.classList.add('position-relative', 'height-6');
-                const progressBackground = createElement('span', progressBarDiv);
-                progressBackground.classList.add('progress', 'progress-back');
-                progressBackground.style.width = '100px';
-                const progressBar = createElement('span', progressBarDiv);
-                progressBar.classList.add('progress', 'progress-bar');
-                progressBar.style.width = `${((index + 1)/total) * 100}px`;
-
-                const stepTitle = createElement('div', parent);
-                stepTitle.innerHTML = form.name;
-
-            };
-            const renderForm = (form, index, total) => {
-                // reset 
+            const onFinalSubmit = ({
+                backSection,
+                stepSection,
+                questionSection,
+                submitSection
+            }) => {
                 backSection.innerHTML = '';
                 stepSection.innerHTML = '';
-                questionSection.classList.remove('myfade-in');
-                setTimeout(() => {
-                    questionSection.innerHTML = '';
-                }, animationTime);
+                questionSection.innerHTML = 'Thank you for filling the survey';
                 submitSection.innerHTML = '';
-
-                // back section
-                if (index > 0 && index < total) {
-                    const backSpan = createElement('span', backSection);
-                    const backIcon = createElement("i", backSpan);
-                    backIcon.classList.add("fas", "fa-arrow-left");
-                    
-                    backSpan.classList.add('cursor-pointer');
-                    backSpan.addEventListener("click", () => {
-                        onBack(() => {
-                            if (index > 0) {
-                                index--;
-                                renderForm(forms[index], index, total);
-                            }
-                        });
-                    });
-                }
-
-                // step section
-                if (index < total) {
-                    renderSteps(index, total, stepSection);
-                }
-                
-                // question section
-                setTimeout(() => {    
-                    const title = createElement('h3', questionSection);
-                    title.innerHTML = form.title;
-
-                    renderQuestions(form, questionSection);
-                    questionSection.classList.add('myfade-in');
-                }, animationTime);
-
-                // submit section
-                if (index < total) {
-                    const submitBtn = createButton("Submit", submitSection);
-                    submitBtn.addEventListener('click', () => {
-                        onSubmit(form, index, () => {
-                            if (index < (total - 1)) {
-                                index++;
-                                renderForm(forms[index], index, total);
-                            } else {
-                                renderForm({
-                                    id: 'last_question',
-                                    title: 'Thank you for submitting the form',
-                                    questions: []
-                                }, index + 1, total);
-                            }
-                        });
-                    });
-                }
             };
+            
+            const {
+                init
+            } = useFormRenderer(
+                forms,
+                {
+                    onSubmit,
+                    onBack,
+                    onFinalSubmit
+                },
+                app,
+            );
+            init();
 
-            renderForm(forms[0], 0, forms.length);
         })();
     </script>
 </body>
