@@ -122,6 +122,7 @@
     <script src="https://kit.fontawesome.com/6f2a26d215.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
     <script>
+        // @ts-check
         const animationTime = 300;
 
         const useComponents = () => {
@@ -249,6 +250,13 @@
 
                 createInput(question, qParentDiv);
 
+                if (question.props?.validations?.length) {
+                    const validationDiv = createElement('div', qParentDiv);
+                    validationDiv.setAttribute('id', `${question.id}-validation`);
+                    validationDiv.classList.add('invalid-feedback');
+                    validationDiv.innerHTML = 'This field required attention';
+                }
+
                 if (question.prompt) {
                     const promptEl = createPrompt(question.prompt, qParentDiv);
                     promptEl.classList.add("form-prompt");
@@ -279,140 +287,6 @@
             } = useComponents();
             
             const forms = [
-                // {
-                //     id: "personal_details",
-                //     name: "Personal Details",
-                //     title: "Personal Details",
-                //     questions: [
-                //         {
-                //             id: "surname",
-                //             question: "Surname",
-                //             type: components.text
-                //         },
-                //         {
-                //             id: "givenName",
-                //             question: "Given Name",
-                //             type: components.text
-                //         },
-                //         {
-                //             id: "nationality",
-                //             question: "Nationality",
-                //             type: components.select,
-                //             options: [
-                //                 "India",
-                //                 "Germany"
-                //             ]
-                //         },
-                //         {
-                //             id: "residence",
-                //             question: "Current place of residence",
-                //             type: components.text
-                //         },
-                //         {
-                //             id: "expertise",
-                //             question: "Primary area of expertise",
-                //             type: components.text
-                //         },
-                //         {
-                //             id: "professionalExperience",
-                //             question: "Total professional experience",
-                //             type: components.text
-                //         },
-                //         {
-                //             id: "educationLevel",
-                //             question: "Highest level of education attained",
-                //             type: components.select,
-                //             options: [
-                //                 "Bachelors",
-                //                 "Masters"
-                //             ]
-                //         },
-                //         {
-                //             id: "educationCountry",
-                //             question: "Country of degree attainment",
-                //             type: components.select,
-                //             options: [
-                //                 "India",
-                //                 "Germany"
-                //             ]
-                //         },
-                //         {
-                //             id: "university",
-                //             question: "Complete University name",
-                //             type: components.select,
-                //             options: [
-                //                 "Mumbai University",
-                //                 "Cambridge"
-                //             ]
-                //         },
-                //         {
-                //             id: "degree",
-                //             question: "Complete degree name",
-                //             type: components.select,
-                //             options: [
-                //                 "Master of Computer Application",
-                //                 "Master of Business Administration"
-                //             ]
-                //         },
-                //         {
-                //             id: "recognition",
-                //             question: "Has your university degree been officially recognized in Germany?",
-                //             type: components.select,
-                //             options: [
-                //                 "Yes",
-                //                 "No"
-                //             ]
-                //         },
-                //         {
-                //             id: "germanEmployment",
-                //             question: "Do you currently hold an employment contract or a confirmed job offer in Germany?",
-                //             type: components.select,
-                //             options: [
-                //                 "Yes",
-                //                 "No"
-                //             ]
-                //         },
-                //         {
-                //             id: "germanCompanyList",
-                //             question: "If yes, list company name and contact person",
-                //             type: components.text // This should be a textarea
-                //         },
-                //         {
-                //             id: "expectedIncome",
-                //             question: "Anticipated Gross Income for the Intended Job",
-                //             prompt: `
-                //                 For IT professionals and bottleneck professions - eligible
-                //                 For Blue card if salary is €39,682.80 or above - eligible
-                //                 For other regular occupations they are eligible for Blue Card if salary is €43,800 or above - eligible
-                //             `,
-                //             type: components.text
-                //         }
-                //     ]
-                // },
-                // {
-                //     id: "",
-                //     name: "Personal",
-                //     title: "Tell us about yourself",
-                //     questions: [
-                //         {
-                //             id: "familyName",
-                //             question: "Family Name",
-                //             type: components.text
-                //         }
-                //     ]
-                // },
-                // {
-                //     id: "",
-                //     name: "Personal",
-                //     title: "Tell us about yourself",
-                //     questions: [
-                //         {
-                //             id: "givenName",
-                //             question: "Given Name",
-                //             type: components.text
-                //         }
-                //     ]
-                // },
                 {
                     id: "personalDetails",
                     name: "Personal Details",
@@ -423,7 +297,11 @@
                             question: "Surname",
                             type: components.text,
                             props: {
-                                placeholder: "Enter your surname"
+                                placeholder: "Enter your surname",
+                                validations: [
+                                    { type: 'required', message: 'Please enter your surname' },
+                                    { type: 'onlyAlphabets', message: 'Numbers are not allowed' }
+                                ],
                             }
                         },
                         {
@@ -456,14 +334,16 @@
                                     { label: "No", value: "No" },
                                 ]
                             }
-                            
                         },
                         {
                             id: "citizenshipList",
                             question: "If yes, please list",
                             type: components.paragraph,
                             props: {
-                                placeholder: "List of citizenships"
+                                placeholder: "List of citizenships",
+                                validations: [
+                                    { type: 'required', message: 'Please enter the list citizenships' }
+                                ],
                             }
                         },
                     ]
@@ -491,7 +371,6 @@
                                     { label: "No", value: "No" },
                                 ]
                             }
-                            
                         },
                         {
                             id: "visitDates",
@@ -666,6 +545,48 @@
             questionSection.classList.add('myfade', 'margin-top-20');
             const submitSection = createElement("div", app);
 
+            const isValid = (form, output) => {
+                let result = true;
+                form.questions.forEach(item => {
+                    // reset field validations
+                    const field = document.getElementById(item.id);
+                    const fieldValidation = document.getElementById(`${item.id}-validation`)
+                    if (field && fieldValidation) {
+                        field.classList.remove('is-invalid');
+                        fieldValidation.innerHTML = 'This field requires attention';
+                    }
+
+                    const value = output[item.id];
+                    
+                    if (item.props?.validations?.length) {
+                        let validation = null;
+                        for (let i = 0; i < item.props.validations.length; i++) {
+                            const localValidation = item.props.validations[i];
+                            if (localValidation.type === 'required') {
+                                if (value == null || value === '') {
+                                    result = false;
+                                    validation = localValidation;
+                                    break;
+                                }
+                            }
+                            if (localValidation.type === 'onlyAlphabets') {
+                                if (/\d/.test(value)) {
+                                    result = false;
+                                    validation = localValidation;
+                                    break;
+                                }
+                            }
+                        }
+                        if (validation && field && fieldValidation) {
+                            field.classList.add('is-invalid');
+                            if (validation.message) {
+                                fieldValidation.innerHTML = validation.message;
+                            }
+                        }
+                    }
+                });
+                return result;
+            };
             const onSubmit = (form, index, next) => {
                 // Extract data
                 const output = {};
@@ -676,14 +597,18 @@
                     }
                 });
                 console.log(`Form ${index + 1}:`, output);
-                next();
+                // Validate data
+                if (isValid(form, output)) {
+                    next();   
+                }
             };
             const onBack = (next) => {
                 next();
             };
 
-            const renderQuestions = (questions, parent) => {
+            const renderQuestions = ({ id, questions }, parent) => {
                 const section = createElement('form', parent);
+                section.setAttribute("id", id);
                 questions.forEach((question) => {
                     renderQuestion(question, section);
                 });
@@ -745,7 +670,7 @@
                     const title = createElement('h3', questionSection);
                     title.innerHTML = form.title;
 
-                    renderQuestions(form.questions, questionSection);
+                    renderQuestions(form, questionSection);
                     questionSection.classList.add('myfade-in');
                 }, animationTime);
 
