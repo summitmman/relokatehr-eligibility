@@ -152,7 +152,7 @@
                 const buttonEl = createElement("button", parent);
                 buttonEl.classList.add("btn", "btn-primary");
                 buttonEl.setAttribute("type", "button");
-                buttonEl.innerHTML = str;  
+                buttonEl.innerHTML = str;
                 return buttonEl;
             };
 
@@ -232,7 +232,7 @@
         };
 
         const useValidations = () => {
-            const { components } = useComponents();
+            const { components, createElement } = useComponents();
 
             const defaultValidationMessage = 'This field requires attention';
             const validators = {
@@ -290,6 +290,21 @@
                     }
                 }
             };
+            const createValidationUI = (question, inputField, parent) => {
+                if (!question.props?.validations?.length) {
+                    return;
+                }
+
+                let validationParent = parent;
+                if (question.type === components.radio) {
+                    validationParent = inputField[inputField.length - 1];
+                }
+
+                const validationDiv = createElement('div', validationParent);
+                validationDiv.setAttribute('id', `${question.id}-validation`);
+                validationDiv.classList.add('invalid-feedback');
+                validationDiv.innerHTML = defaultValidationMessage;
+            };
 
             const isValid = (form, output) => {
                 let result = true;
@@ -323,7 +338,8 @@
 
             return {
                 validators,
-                isValid
+                isValid,
+                createValidationUI
             };
         };
 
@@ -351,13 +367,16 @@
                 createPrompt,
                 createRadio
             } = useComponents();
+            const {
+                createValidationUI
+            } = useValidations();
 
             // HTML elements
             let backSection = null;
             let stepSection = null;
             let questionSection = null;
             let submitSection = null;
-            
+
             const animationTime = 300;
 
             const createInput = (item, parent) => {
@@ -394,16 +413,7 @@
 
                 const inputField = createInput(question, qParentDiv);
 
-                if (question.props?.validations?.length) {
-                    let validationParent = qParentDiv;
-                    if (question.type === components.radio) {
-                        validationParent = inputField[inputField.length - 1];
-                    }
-                    const validationDiv = createElement('div', validationParent);
-                    validationDiv.setAttribute('id', `${question.id}-validation`);
-                    validationDiv.classList.add('invalid-feedback');
-                    validationDiv.innerHTML = 'This field required attention';
-                }
+                createValidationUI(question, inputField, qParentDiv);
 
                 if (question.prompt) {
                     const promptEl = createPrompt(question.prompt, qParentDiv);
@@ -423,7 +433,7 @@
                 const stepNo = createElement('div', parent);
                 stepNo.innerHTML = `Step ${index + 1}/${total}`;
                 stepNo.classList.add('step-no');
-                
+
                 const progressBarDiv = createElement('div', parent);
                 progressBarDiv.classList.add('position-relative', 'height-6');
                 const progressBackground = createElement('span', progressBarDiv);
@@ -452,7 +462,7 @@
                     const backSpan = createElement('span', backSection);
                     const backIcon = createElement("i", backSpan);
                     backIcon.classList.add("fas", "fa-arrow-left");
-                    
+
                     backSpan.classList.add('cursor-pointer');
                     backSpan.addEventListener("click", () => {
                         onBack(() => {
@@ -468,9 +478,9 @@
                 if (index < total) {
                     renderSteps(index, total, stepSection);
                 }
-                
+
                 // question section
-                setTimeout(() => {    
+                setTimeout(() => {
                     const title = createElement('h3', questionSection);
                     title.innerHTML = form.title;
 
@@ -501,13 +511,13 @@
             const init = () => {
                 backSection = createElement("div", app);
                 backSection.classList.add('back-section');
-                
+
                 stepSection = createElement('div', app);
                 stepSection.classList.add('step-section');
-                
+
                 questionSection = createElement("div", app);
                 questionSection.classList.add('myfade', 'margin-top-20');
-                
+
                 submitSection = createElement("div", app);
 
                 renderForm(forms[0], 0, forms.length);
@@ -517,13 +527,13 @@
                 init
             };
         };
-        
+
 
         (() => {
             const app = document.getElementById("quizApp");
             if (!app)
                 return;
-            
+
             app.innerHTML = "";
 
             const {
@@ -534,7 +544,7 @@
                 validators,
                 isValid
             } = useValidations();
-            
+
             const forms = [
                 {
                     id: "personalDetails",
@@ -790,7 +800,7 @@
                     ]
                 },
             ];
-            
+
             const onSubmit = (form, index, next) => {
                 // Extract data
                 const output = {};
@@ -824,7 +834,7 @@
                 questionSection.innerHTML = 'Thank you for filling the survey';
                 submitSection.innerHTML = '';
             };
-            
+
             const {
                 init
             } = useFormRenderer(
