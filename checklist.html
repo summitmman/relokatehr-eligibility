@@ -124,6 +124,90 @@
     <script>
         // @ts-check
 
+        // Global store
+        const store = {
+            countries: null
+        };
+
+        const useServices = () => {
+            // API calls
+            const getCountries = () => {
+                return fetch("http://localhost:3000/countries")
+                    .then((response) => response.json())
+                    .then((response) => {
+                        return response;
+                    });
+            };
+            const getUniversities = (params = { pageSize: 1000 }) => {
+                if (!params?.countryCode || !params?.country) {
+                    return Promise.reject("Mandatory params not available");
+                }
+                const url = 'http://localhost:3000/universities';
+                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}`;
+                return fetch(`${url}${query}`)
+                    .then((response) => response.json())
+                    .then((response) => {
+                        return response;
+                    });
+            };
+            const getDegrees = (params = { pageSize: 1000 }) => {
+                if (!params?.countryCode || !params?.country || !params?.degreeTypeId) {
+                    return Promise.reject("Mandatory params not available");
+                }
+                const url = 'http://localhost:3000/degrees';
+                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&degreeTypeId=${params.degreeTypeId}`;
+                return fetch(`${url}${query}`)
+                    .then((response) => response.json())
+                    .then((response) => {
+                        return response;
+                    });
+            };
+
+            // API calls massaged for form creator structure
+            // These names are to be used in form schema
+            const services = {
+                getCountries: "getCountries",
+                getUniversities: "getUniversities",
+                getDegrees: "getDegrees"
+            };
+            const serviceHelpers = {
+                [services.getCountries]: () => {
+                    // cached data for countries
+                    if (store.countries !== null) {
+                        return Promise.resolve(store.countries).then(response => {
+                            return response.map(item => ({ label: item.name, value: item.code }));
+                        });
+                    }
+                    // else fetch from api
+                    return getCountries()
+                        .then((response) => {
+                            store.countries = response;
+                            return response.map(item => ({ label: item.name, value: item.code }));
+                        });
+                },
+                [services.getUniversities]: (params) => {
+                    return getUniversities(params)
+                        .then((response) => {
+                            return (response.data ?? []).map(item => ({label: item.university, value: item.uid}));
+                        });
+                },
+                [services.getDegrees]: (params) => {
+                    return getDegrees(params)
+                        .then((response) => {
+                            return (response.data ?? []).map(item => ({label: item.degree, value: item.uid}));
+                        });
+                },
+            };
+
+            return {
+                services,
+                serviceHelpers,
+                getCountries,
+                getUniversities,
+                getDegrees
+            };
+        };
+
         const useComponents = () => {
             // MAPPING
             const components = {
@@ -139,6 +223,52 @@
                 parent.appendChild(element);
                 return element;
             };
+            // populates options for select tag
+            // supports array as well as promise/api calls
+            // can be used to repopulate the select tag
+            const populateSelectOptions = (options, apiParams, events, parentSelect) => {
+                if (!parentSelect) {
+                    return;
+                }
+                if (typeof options === "function") {
+                    parentSelect.setAttribute("disabled", "true");
+                    const option = createElement("option", parentSelect);
+                    option.innerHTML = "Loading...";
+
+                    options(apiParams)
+                        .then((response) => {
+                            if (!response.length) {
+                                throw new Error('No options loaded');
+                            }
+                            parentSelect.innerHTML = "";
+                            response.forEach((optionItem) => {
+                                const optionEl = createElement("option", parentSelect);
+                                optionEl.setAttribute("value", optionItem.value);
+                                optionEl.innerHTML = optionItem.label;
+                            });
+                            parentSelect.removeAttribute("disabled");
+                        })
+                        .catch((exception) => {
+                            parentSelect.innerHTML = "";
+                            const optionEl = createElement("option", parentSelect);
+                            optionEl.innerHTML = "No options loaded";
+                        }).finally(() => {
+                            if (events.onChange) {
+                                events.onChange(parentSelect.value);
+                            }
+                        });
+                } else {
+                    parentSelect.innerHTML = "";
+                    options.forEach((optionItem) => {
+                        const option = createElement("option", parentSelect);
+                        option.setAttribute("value", optionItem.value);
+                        option.innerHTML = optionItem.label;
+                    });
+                    if (events.onChange) {
+                        events.onChange(parentSelect.value);
+                    }
+                }
+            };
 
             // COMPONENTS
             const createPrompt = (str, parent, type="success") => {
@@ -148,16 +278,23 @@
                 prompt.innerHTML = str;
                 return prompt;
             };
-            const createButton = (str, parent) => {
+            const createButton = (str, events, parent) => {
+                const { onClick } = events;
                 const buttonEl = createElement("button", parent);
                 buttonEl.classList.add("btn", "btn-primary");
                 buttonEl.setAttribute("type", "button");
                 buttonEl.innerHTML = str;
+
+                if (onClick) {
+                    buttonEl.addEventListener('click', onClick);
+                }
+
                 return buttonEl;
             };
 
             // FORM COMPONENTS
-            const createText = (item, parent) => {
+            const createText = (item, events, parent) => {
+                const { onChange } = events;
                 const input = createElement("input", parent);
                 input.classList.add('form-control');
                 input.setAttribute("type", "text");
@@ -167,9 +304,17 @@
                         input.setAttribute("placeholder", item.props.placeholder);
                     }
                 }
+
+                if (onChange) {
+                    input.addEventListener('change', () => {
+                        onChange(input.value);
+                    });
+                }
+
                 return input;
             };
-            const createParagraph = (item, parent) => {
+            const createParagraph = (item, events, parent) => {
+                const { onChange } = events;
                 const input = createElement("textarea", parent);
                 input.classList.add('form-control');
                 input.setAttribute("id", item.id);
@@ -179,20 +324,33 @@
                     }
                     input.setAttribute("rows", item.props.rows ?? 5);
                 }
+
+                if (onChange) {
+                    input.addEventListener('change', () => {
+                        onChange(input.value);
+                    });
+                }
+
                 return input;
             };
-            const createSelect = (item, parent) => {
+            const createSelect = (item, events, parent) => {
+                const { onChange } = events;
                 const select = createElement("select", parent);
                 select.setAttribute("id", item.id);
                 select.classList.add('form-select');
-                item.props.options.forEach((optionItem) => {
-                    const option = createElement("option", select);
-                    option.setAttribute("value", optionItem.value);
-                    option.innerHTML = optionItem.label;
-                });
+
+                populateSelectOptions(item.props.options ?? [], item.props.apiParams, events, select);
+
+                if (onChange) {
+                    select.addEventListener('change', () => {
+                        onChange(select.value);
+                    });
+                }
+                
                 return select;
             };
-            const createRadio = (item, parent) => {
+            const createRadio = (item, events, parent) => {
+                const { onChange } = events;
                 const radioGroup = [];
                 item.props.options.forEach((optionItem, index) => {
                     const radioDiv = createElement("div", parent);
@@ -210,7 +368,16 @@
                     label.classList.add("form-check-label");
                     label.setAttribute("for", `${item.id}${index}`);
                     label.innerHTML = optionItem.label;
+
+                    if (onChange) {
+                        radioEl.addEventListener("change", function () {
+                            onChange(this.value);
+                        })
+                    }
                 });
+
+                
+
                 return radioGroup;
             };
 
@@ -220,6 +387,7 @@
                 components,
                 // util
                 createElement,
+                populateSelectOptions,
                 // components
                 createButton,
                 createPrompt,
@@ -346,15 +514,17 @@
         const useFormRenderer = (
             forms,
             {
-                onSubmit = (form, index, next) => {},
+                onSubmit = (form, output, next) => { next(); },
                 onBack = (next) => {},
                 onFinalSubmit = ({
                     backSection,
                     stepSection,
                     questionSection,
                     submitSection
-                }) => {}
+                }) => {},
+                onOutputChange = (value, item, forms, output) => {}
             },
+            output = {},
             app
         ) => {
             const {
@@ -368,8 +538,10 @@
                 createRadio
             } = useComponents();
             const {
-                createValidationUI
+                createValidationUI,
+                isValid
             } = useValidations();
+            const { serviceHelpers } = useServices();
 
             // HTML elements
             let backSection = null;
@@ -379,26 +551,59 @@
 
             const animationTime = 300;
 
+            // common change event, when any form element is changed
+            const onChange = (value, item) => {
+                // Update output
+                output[item.id] = value;
+                // Check affects dependencies and delete their values
+                if (item.affects?.length) {
+                    item.affects.forEach(id => {
+                        if (item.type === components.radio) {
+                            const els = document.getElementsByName(id);
+                            if (els?.length) {
+                                els.forEach(el => {
+                                    el.checked = false;
+                                });
+                            }
+                        } else {
+                            const el = document.getElementById(id);
+                            if (el) {
+                                el.value = '';
+                            }
+                        }
+
+                        output[id] = undefined;
+                    });
+                }
+                onOutputChange(value, item, forms, output);
+            };
+
             const createInput = (item, parent) => {
+                const onLocalChange = (value) => {
+                    onChange(value, item);
+                };
                 switch(item.type) {
                     case components.text: {
-                        return createText(item, parent);
+                        return createText(item, { onChange: onLocalChange }, parent);
                         break;
                     }
                     case components.paragraph: {
-                        return createParagraph(item, parent);
+                        return createParagraph(item, { onChange: onLocalChange }, parent);
                         break;
                     }
                     case components.select: {
-                        return createSelect(item, parent);
+                        if (typeof item.props.options === 'string') {
+                            item.props.options = serviceHelpers[item.props.options] ?? [];
+                        }
+                        return createSelect(item, { onChange: onLocalChange }, parent);
                         break;
                     }
                     case components.radio: {
-                        return createRadio(item, parent);
+                        return createRadio(item, { onChange: onLocalChange }, parent);
                         break;
                     }
                     default: {
-                        return createText(item, parent);
+                        return createText(item, { onChange: onLocalChange }, parent);
                         break;
                     }
                 }
@@ -490,22 +695,25 @@
 
                 // submit section
                 if (index < total) {
-                    const submitBtn = createButton("Submit", submitSection);
-                    submitBtn.addEventListener('click', () => {
-                        onSubmit(form, index, () => {
-                            if (index < (total - 1)) {
-                                index++;
-                                renderForm(forms[index], index, total);
-                            } else {
-                                onFinalSubmit({
-                                    backSection,
-                                    stepSection,
-                                    questionSection,
-                                    submitSection
-                                });
-                            }
-                        });
-                    });
+                    const onClick = () => {
+                        // Validate data
+                        if (isValid(form, output)) {
+                            onSubmit(form, output, () => {
+                                if (index < (total - 1)) {
+                                    index++;
+                                    renderForm(forms[index], index, total);
+                                } else {
+                                    onFinalSubmit({
+                                        backSection,
+                                        stepSection,
+                                        questionSection,
+                                        submitSection
+                                    });
+                                }
+                            });
+                        }
+                    };
+                    const submitBtn = createButton("Submit", { onClick }, submitSection);
                 }
             };
             const init = () => {
@@ -528,7 +736,6 @@
             };
         };
 
-
         (() => {
             const app = document.getElementById("quizApp");
             if (!app)
@@ -539,11 +746,13 @@
             const {
                 components,
                 createElement,
+                populateSelectOptions
             } = useComponents();
             const {
                 validators,
                 isValid
             } = useValidations();
+            const { services } = useServices();
 
             const forms = [
                 {
@@ -574,15 +783,11 @@
                         {
                             id: "nationality",
                             question: "Nationality",
-                            type: components.select,
+                            type: components.text,
                             props: {
                                 placeholder: "Select your nationality",
-                                options: [
-                                    { label: "India", value: 129 },
-                                    { label: "Germany", value: 14 }
-                                ],
                                 validations: [
-                                    { type: validators.required, message: 'Please select an option' }
+                                    { type: validators.required, message: 'Please enter your nationality' }
                                 ],
                             }
                         },
@@ -706,10 +911,19 @@
                             props: {
                                 placeholder: "Select level",
                                 options: [
-                                    { label: "Bachelors", value: "Bachelors" },
-                                    { label: "Masters", value: "Masters" },
+                                    { label: "Bachelor (3-jährig)", value: 3283 },
+                                    { label: "Bachelor (4-jährig)", value: 3288 },
+                                    { label: "Bachelor (4,5- bis 5,5-jährig)", value: 3348 },
+                                    { label: "Doctor of Philosophy", value: 494 },
+                                    { label: "Integrated Master's Degree / Dual Degree", value: 3293 },
+                                    { label: "Master (2-jährig)", value: 2301 },
+                                    { label: "Master (3-Jährig)", value: 3004 },
+                                    { label: "Master of Philosophy", value: 836 },
+                                    { label: "Postgraduate Bachelor", value: 3350 },
+                                    { label: "Postgraduate Diploma", value: 3349  }
                                 ]
-                            }
+                            },
+                            affects: ["degree"]
                         },
                         {
                             id: "educationCountry",
@@ -717,11 +931,9 @@
                             type: components.select,
                             props: {
                                 placeholder: "Select country",
-                                options: [
-                                    { label: "India", value: 129 },
-                                    { label: "Germany", value: 14 },
-                                ]
-                            }
+                                options: services.getCountries,
+                            },
+                            affects: ["university", "degree"]
                         },
                         {
                             id: "university",
@@ -729,10 +941,11 @@
                             type: components.select,
                             props: {
                                 placeholder: "Select university name",
-                                options: [
-                                    { label: "Mumbai University", value: 129 },
-                                    { label: "Cambridge", value: 14 },
-                                ]
+                                options: services.getUniversities,
+                                apiParams: {
+                                    pageSize: 100,
+                                    educationCountry: null
+                                }
                             }
                         },
                         {
@@ -741,10 +954,12 @@
                             type: components.select,
                             props: {
                                 placeholder: "Select degree name",
-                                options: [
-                                    { label: "Master of Computer Application", value: 129 },
-                                    { label: "Master of Business Administration", value: 14 },
-                                ]
+                                options: services.getDegrees,
+                                apiParams: {
+                                    pageSize: 100,
+                                    educationCountry: null,
+                                    educationLevel: null
+                                }
                             }
                         },
                         {
@@ -800,25 +1015,10 @@
                     ]
                 },
             ];
+            const output = {};
 
-            const onSubmit = (form, index, next) => {
-                // Extract data
-                const output = {};
-                form.questions.forEach(item => {
-                    let input = document.getElementById(item.id);
-                    if (item.type === components.radio) {
-                        input = document.querySelector(`input[name="${item.id}"]:checked`);
-                    }
-                    if (input) {
-                        output[item.id] = input.value;
-                    }
-                });
-                console.log(output);
-
-                // Validate data
-                if (isValid(form, output)) {
-                    next();
-                }
+            const onSubmit = (form, output, next) => {
+                next();
             };
             const onBack = (next) => {
                 next();
@@ -834,6 +1034,81 @@
                 questionSection.innerHTML = 'Thank you for filling the survey';
                 submitSection.innerHTML = '';
             };
+            // this function is used to detect change in field which affects others and further populates the new option list for select tag for now
+            const onOutputChange = (localValue, localItem, localForms, localOutput) => {
+                if (!localItem.affects?.length) {
+                    return;
+                }
+
+                const affectedItems = {};
+                localItem.affects.forEach(id => {
+                    // Get all affected field schemas
+                    forms.forEach(form => {
+                        (form.questions || []).forEach(questionItem => {
+                            if (questionItem.id === id) {
+                                affectedItems[id] = questionItem;
+                            }
+                        });
+                    });
+                });
+
+                if (!Object.keys(affectedItems).length) {
+                    return;
+                }
+                
+                Object.keys(affectedItems).forEach(key => {
+                    const affectedItem = affectedItems[key];
+                    // checks for each affected field which is a select field
+                    // and has a promise, which means it will dynamically update
+                    // if static array or undefined .. no action required
+                    if (
+                        affectedItem.type !== components.select
+                        || (
+                            typeof affectedItem.props?.options !== 'string'
+                            && typeof affectedItem.props?.options !== 'function'
+                        )
+                    ) {
+                        return;
+                    }
+                    
+                    // need to call apis
+                    // prepare apiParams first
+                    const { apiParams } = affectedItem.props;
+                    if (apiParams) {
+                        // check if any key in the apiParams are available in the output object
+                        // if so then update the latest value in apiParams
+                        Object.keys(apiParams).forEach(key => {
+                            if (output[key] == null) {
+                                return;
+                            }
+                            
+                            apiParams[key] = output[key];
+                            // some params need to be renamed/duplicated because of the api param names
+                            // country and countryCode
+                            if (apiParams[key] && key.toLocaleLowerCase().includes('country')) {
+                                apiParams.countryCode = apiParams[key];
+                                const country = (store.countries ?? []).find(item => item.code == apiParams.countryCode);
+                                if (country) {
+                                    apiParams.country = country.name;
+                                }
+                            }
+                            // degreeTypeId
+                            if (apiParams[key] && key === 'educationLevel') {
+                                apiParams.degreeTypeId = apiParams[key];
+                            }
+                        });
+                    }
+                    // re-populate the affected select options
+                    populateSelectOptions(
+                        affectedItem.props.options,
+                        affectedItem.props.apiParams,
+                        {
+                            onChange: (value) => { output[affectedItem.id] = value; }
+                        },
+                        document.getElementById(affectedItem.id)
+                    );
+                });
+            };
 
             const {
                 init
@@ -842,8 +1117,10 @@
                 {
                     onSubmit,
                     onBack,
-                    onFinalSubmit
+                    onFinalSubmit,
+                    onOutputChange,
                 },
+                output,
                 app,
             );
             init();

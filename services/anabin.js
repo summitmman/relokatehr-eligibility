@@ -23,6 +23,7 @@ const fetchAnabinDegreeDetails = (query) => {
     if (query.country != null && query.countryCode != null) {
         anabinDegreeQueryParams.sSearch_8 = query.country;
         anabinDegreeQueryParams.land = query.countryCode;
+        anabinDegreeQueryParams.sSearch_9 = query.degreeTypeId;
     }
 
     return fetch(
