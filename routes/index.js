@@ -6,6 +6,7 @@ const { getDegrees } = require('../apis/getDegrees');
 const { getUniversities } = require('../apis/getUniversities');
 const { getDegreeRecognition } = require('../apis/getDegreeRecognition');
 const { getUniversityRecognition } = require('../apis/getUniversityRecognition');
+const { getDegreeTypes } = require('../apis/getDegreeTypes');
 
 const router = (req, res) => {
     const requestUrl = url.parse(req.url);
@@ -26,6 +27,9 @@ const router = (req, res) => {
         }
         case '/countries': {
             return getCountries(req, res);
+        }
+        case '/degreeTypes': {
+            return getDegreeTypes(req, res);
         }
         default: {
             return new Promise((resolve, reject) => {

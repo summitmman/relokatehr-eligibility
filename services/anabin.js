@@ -3,7 +3,8 @@ const {
     anabinDegreeQueryParams,
     anabinUniversityQueryParams,
     anabinDegreeDetailQueryParams,
-    anabinUniversityDetailQueryParams
+    anabinUniversityDetailQueryParams,
+    anabinDegreeTypeParams
 } = require('../shared/constants');
 const { convertObjToAPIString } = require('../shared/utils');
 
@@ -23,6 +24,8 @@ const fetchAnabinDegreeDetails = (query) => {
     if (query.country != null && query.countryCode != null) {
         anabinDegreeQueryParams.sSearch_8 = query.country;
         anabinDegreeQueryParams.land = query.countryCode;
+    }
+    if (query.degreeTypeId != null) {
         anabinDegreeQueryParams.sSearch_9 = query.degreeTypeId;
     }
 
@@ -163,10 +166,62 @@ const fetchAnabinUniversityDetail = (query) => {
     });
 };
 
+const fetchAnabinDegreeTypeDetails = (query) => {
+    // has defaults
+    if (query.sEcho != null) {
+        anabinDegreeTypeParams.sEcho = query.sEcho;
+    }
+    if (query.start != null) {
+        anabinDegreeTypeParams.iDisplayStart = query.start;
+    }
+    if (query.pageSize != null) {
+        anabinDegreeTypeParams.iDisplayLength = query.pageSize;
+    }
+
+    // include only if needed
+    if (query.country != null && query.countryCode != null) {
+        anabinDegreeTypeParams.sSearch_7 = query.country;
+        anabinDegreeTypeParams.land = query.countryCode;
+    }
+
+    return fetch(
+        `${anabinUrl}?${convertObjToAPIString(anabinDegreeTypeParams)}`
+    ).then((anabinResponse) => {
+        return anabinResponse.json();
+    }).then((anabinResponse) => {
+        const data = anabinResponse.aaData.map((item) => {
+            return {
+                // icon: "<img style=\"cursor:pointer;\" src=/typo3conf/ext/user_anabin/pi1/res/details_open.png>"
+                uid: item[1],
+                degreeType: item[2],
+                // ""
+                // "3 Jahr(e)"
+                // "5 Jahr(e)"
+                // "A4"
+                // "Afghanistan"
+            };
+        });
+
+        return {
+            sEcho: anabinResponse.sEcho,
+            totalResponse: anabinResponse.iTotalRecords,
+            totalDisplayRecords: anabinResponse.iTotalDisplayRecords,
+            data,
+        };
+    }).catch((error) => {
+        return {
+            code: 400,
+            error,
+            message: 'error fetching data from anabin'
+        };
+    });
+};
+
 
 module.exports = {
     fetchAnabinDegreeDetails,
     fetchAnabinDegreeDetail,
     fetchAnabinUniversityDetails,
-    fetchAnabinUniversityDetail
+    fetchAnabinUniversityDetail,
+    fetchAnabinDegreeTypeDetails
 };

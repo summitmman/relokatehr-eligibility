@@ -138,24 +138,39 @@
                         return response;
                     });
             };
-            const getUniversities = (params = { pageSize: 1000 }) => {
+            const getUniversities = (params = { pageSize: 1000, start: 0 }) => {
                 if (!params?.countryCode || !params?.country) {
                     return Promise.reject("Mandatory params not available");
                 }
+                params.start = params.start ?? 0;
                 const url = 'http://localhost:3000/universities';
-                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}`;
+                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&start=${params.start}`;
                 return fetch(`${url}${query}`)
                     .then((response) => response.json())
                     .then((response) => {
                         return response;
                     });
             };
-            const getDegrees = (params = { pageSize: 1000 }) => {
+            const getDegrees = (params = { pageSize: 1000, start: 0 }) => {
                 if (!params?.countryCode || !params?.country || !params?.degreeTypeId) {
                     return Promise.reject("Mandatory params not available");
                 }
+                params.start = params.start ?? 0;
                 const url = 'http://localhost:3000/degrees';
-                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&degreeTypeId=${params.degreeTypeId}`;
+                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&degreeTypeId=${params.degreeTypeId}&start=${params.start}`;
+                return fetch(`${url}${query}`)
+                    .then((response) => response.json())
+                    .then((response) => {
+                        return response;
+                    });
+            };
+            const getDegreeTypes = (params = { pageSize: 1000, start: 0 }) => {
+                if (!params?.countryCode || !params?.country) {
+                    return Promise.reject("Mandatory params not available");
+                }
+                params.start = params.start ?? 0;
+                const url = 'http://localhost:3000/degreeTypes';
+                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&start=${params.start}`;
                 return fetch(`${url}${query}`)
                     .then((response) => response.json())
                     .then((response) => {
@@ -168,7 +183,8 @@
             const services = {
                 getCountries: "getCountries",
                 getUniversities: "getUniversities",
-                getDegrees: "getDegrees"
+                getDegrees: "getDegrees",
+                getDegreeTypes: "getDegreeTypes"
             };
             const serviceHelpers = {
                 [services.getCountries]: () => {
@@ -182,19 +198,39 @@
                     return getCountries()
                         .then((response) => {
                             store.countries = response;
-                            return response.map(item => ({ label: item.name, value: item.code }));
+                            return {
+                                data: response.map(item => ({ label: item.name, value: item.code }))
+                            };
                         });
                 },
                 [services.getUniversities]: (params) => {
                     return getUniversities(params)
                         .then((response) => {
-                            return (response.data ?? []).map(item => ({label: item.university, value: item.uid}));
+                            if (!response) {
+                                throw new Error('Error fetch data from anabin');
+                            }
+                            response.data = (response.data ?? []).map(item => ({label: item.university, value: item.uid}))
+                            return response;
                         });
                 },
                 [services.getDegrees]: (params) => {
                     return getDegrees(params)
                         .then((response) => {
-                            return (response.data ?? []).map(item => ({label: item.degree, value: item.uid}));
+                            if (!response) {
+                                throw new Error('Error fetch data from anabin');
+                            }
+                            response.data = (response.data ?? []).map(item => ({label: item.degree, value: item.uid}));
+                            return response;
+                        });
+                },
+                [services.getDegreeTypes]: (params) => {
+                    return getDegreeTypes(params)
+                        .then((response) => {
+                            if (!response) {
+                                throw new Error('Error fetch data from anabin');
+                            }
+                            response.data = (response.data ?? []).map(item => ({label: item.degreeType, value: item.uid}));
+                            return response;
                         });
                 },
             };
@@ -204,7 +240,8 @@
                 serviceHelpers,
                 getCountries,
                 getUniversities,
-                getDegrees
+                getDegrees,
+                getDegreeTypes
             };
         };
 
@@ -216,12 +253,31 @@
                 radio: "radio",
                 paragraph: "paragraph"
             };
+            const defaultSelectOption = {
+                label: 'Select an option',
+                value: undefined
+            };
 
             // UTILS
             const createElement = (el, parent) => {
                 const element = document.createElement(el);
                 parent.appendChild(element);
                 return element;
+            };
+            const syncPoll = (fnToPoll, params, callback, next, catchFn, finallyFn) => {
+                const finalParams = params ?? {};
+                fnToPoll(params) // here params is intentional
+                    .then(response => {
+                        callback(response, finalParams);
+                        const nextParams = next(response, finalParams);
+                        if (nextParams) {
+                            syncPoll(fnToPoll, nextParams, callback, next, catchFn, finallyFn);
+                        }
+                    })
+                    .catch(catchFn)
+                    .finally(() => {
+                        finallyFn(finalParams);
+                    });
             };
             // populates options for select tag
             // supports array as well as promise/api calls
@@ -235,30 +291,76 @@
                     const option = createElement("option", parentSelect);
                     option.innerHTML = "Loading...";
 
-                    options(apiParams)
-                        .then((response) => {
-                            if (!response.length) {
+                    const callback = (response, localParams) => {
+                        const { start = 0 } = localParams;
+                        if (start === 0) {
+                            if (!response?.data?.length) {
                                 throw new Error('No options loaded');
                             }
                             parentSelect.innerHTML = "";
-                            response.forEach((optionItem) => {
-                                const optionEl = createElement("option", parentSelect);
-                                optionEl.setAttribute("value", optionItem.value);
-                                optionEl.innerHTML = optionItem.label;
-                            });
-                            parentSelect.removeAttribute("disabled");
-                        })
-                        .catch((exception) => {
-                            parentSelect.innerHTML = "";
+                            response.data.unshift(defaultSelectOption);
+                        }
+                        response.data.forEach((optionItem) => {
                             const optionEl = createElement("option", parentSelect);
-                            optionEl.innerHTML = "No options loaded";
-                        }).finally(() => {
-                            if (events.onChange) {
-                                events.onChange(parentSelect.value);
-                            }
+                            optionEl.setAttribute("value", optionItem.value);
+                            optionEl.innerHTML = optionItem.label;
                         });
+                        parentSelect.removeAttribute("disabled");
+                    };
+                    const catchFn = (exception) => {
+                        parentSelect.innerHTML = "";
+                        const optionEl = createElement("option", parentSelect);
+                        optionEl.innerHTML = "No options loaded";
+                        optionEl.setAttribute("value", undefined);
+                    };
+                    const finallyFn = (localParams) => {
+                        const { start = 0 } = localParams;
+                        if (start === 0 && events.onChange) {
+                            events.onChange(parentSelect.value);
+                        }
+                    };
+                    const next = (localResponse, localParams) => {
+                        // start = 0; pageSize = 10
+                        // totalResponse = 36015; totalDisplayRecords = 34
+                        const { start = 0, pageSize = 0 } = localParams;
+                        const { totalResponse = 0, totalDisplayRecords = 0 } = localResponse;
+
+                        const currentRecords = start + pageSize;
+                        if (currentRecords < totalDisplayRecords) {
+                            return {
+                                ...localParams,
+                                start: currentRecords
+                            };
+                        }
+                    };
+                    syncPoll(options, apiParams, callback, next, catchFn, finallyFn);
+                    // options(apiParams)
+                    //     .then((response) => {
+                    //         if (!response.length) {
+                    //             throw new Error('No options loaded');
+                    //         }
+                    //         parentSelect.innerHTML = "";
+                    //         response.unshift(defaultSelectOption);
+                    //         response.forEach((optionItem) => {
+                    //             const optionEl = createElement("option", parentSelect);
+                    //             optionEl.setAttribute("value", optionItem.value);
+                    //             optionEl.innerHTML = optionItem.label;
+                    //         });
+                    //         parentSelect.removeAttribute("disabled");
+                    //     })
+                    //     .catch((exception) => {
+                    //         parentSelect.innerHTML = "";
+                    //         const optionEl = createElement("option", parentSelect);
+                    //         optionEl.innerHTML = "No options loaded";
+                    //         optionEl.setAttribute("value", undefined);
+                    //     }).finally(() => {
+                    //         if (events.onChange) {
+                    //             events.onChange(parentSelect.value);
+                    //         }
+                    //     });
                 } else {
                     parentSelect.innerHTML = "";
+                    options.unshift(defaultSelectOption);
                     options.forEach((optionItem) => {
                         const option = createElement("option", parentSelect);
                         option.setAttribute("value", optionItem.value);
@@ -905,27 +1007,6 @@
                     title: "Educational background",
                     questions: [
                         {
-                            id: "educationLevel",
-                            question: "Highest level of education attained",
-                            type: components.select,
-                            props: {
-                                placeholder: "Select level",
-                                options: [
-                                    { label: "Bachelor (3-jährig)", value: 3283 },
-                                    { label: "Bachelor (4-jährig)", value: 3288 },
-                                    { label: "Bachelor (4,5- bis 5,5-jährig)", value: 3348 },
-                                    { label: "Doctor of Philosophy", value: 494 },
-                                    { label: "Integrated Master's Degree / Dual Degree", value: 3293 },
-                                    { label: "Master (2-jährig)", value: 2301 },
-                                    { label: "Master (3-Jährig)", value: 3004 },
-                                    { label: "Master of Philosophy", value: 836 },
-                                    { label: "Postgraduate Bachelor", value: 3350 },
-                                    { label: "Postgraduate Diploma", value: 3349  }
-                                ]
-                            },
-                            affects: ["degree"]
-                        },
-                        {
                             id: "educationCountry",
                             question: "Country of degree attainment",
                             type: components.select,
@@ -933,7 +1014,22 @@
                                 placeholder: "Select country",
                                 options: services.getCountries,
                             },
-                            affects: ["university", "degree"]
+                            affects: ["educationLevel", "university", "degree"]
+                        },
+                        {
+                            id: "educationLevel",
+                            question: "Highest level of education attained",
+                            type: components.select,
+                            props: {
+                                placeholder: "Select level",
+                                options: services.getDegreeTypes,
+                                apiParams: {
+                                    pageSize: 100,
+                                    educationCountry: null,
+                                    educationLevel: null
+                                }
+                            },
+                            affects: ["degree"]
                         },
                         {
                             id: "university",
@@ -943,7 +1039,7 @@
                                 placeholder: "Select university name",
                                 options: services.getUniversities,
                                 apiParams: {
-                                    pageSize: 100,
+                                    pageSize: 500,
                                     educationCountry: null
                                 }
                             }
