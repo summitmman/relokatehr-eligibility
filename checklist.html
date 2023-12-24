@@ -367,6 +367,7 @@
                     if (!data.length) {
                         const option = createElement("option", parent);
                         option.setAttribute("value", undefined);
+                        option.setAttribute("customoption", undefined);
                         option.innerHTML = "No Options Loaded";
 
                         parent.setAttribute("disabled", true);
