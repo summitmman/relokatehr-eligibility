@@ -203,9 +203,10 @@
                 },
                 [services.getUniversities]: (params) => {
                     // country and countryCode
-                    if (params.educationCountryOption) {
-                        params.countryCode = params.educationCountryOption.value;
-                        params.country = params.educationCountryOption.label;
+                    const educationCountryOption = params[`${store.reservedKeys.educationCountry}Option`];
+                    if (educationCountryOption) {
+                        params.countryCode = educationCountryOption.value;
+                        params.country = educationCountryOption.label;
                     }
                     return getUniversities(params)
                         .then((response) => {
@@ -218,13 +219,15 @@
                 },
                 [services.getDegrees]: (params) => {
                     // country and countryCode
-                    if (params.educationCountryOption) {
-                        params.countryCode = params.educationCountryOption.value;
-                        params.country = params.educationCountryOption.label;
+                    const educationCountryOption = params[`${store.reservedKeys.educationCountry}Option`];
+                    if (educationCountryOption) {
+                        params.countryCode = educationCountryOption.value;
+                        params.country = educationCountryOption.label;
                     }
                     // degreeTypeId
-                    if (params.educationLevel && params.educationLevel !== 'undefined') {
-                        params.degreeTypeId = params.educationLevel;
+                    const educationLevel = params[store.reservedKeys.educationLevel];
+                    if (educationLevel && educationLevel !== 'undefined') {
+                        params.degreeTypeId = educationLevel;
                     }
                     return getDegrees(params)
                         .then((response) => {
@@ -237,9 +240,10 @@
                 },
                 [services.getDegreeTypes]: (params) => {
                     // country and countryCode
-                    if (params.educationCountryOption) {
-                        params.countryCode = params.educationCountryOption.value;
-                        params.country = params.educationCountryOption.label;
+                    const educationCountryOption = params[`${store.reservedKeys.educationCountry}Option`];
+                    if (educationCountryOption) {
+                        params.countryCode = educationCountryOption.value;
+                        params.country = educationCountryOption.label;
                     }
                     return getDegreeTypes(params)
                         .then((response) => {
@@ -954,6 +958,13 @@
                 }
             };
 
+            store.reservedKeys = {
+                educationCountry: 'educationCountry',
+                educationLevel: 'educationLevel',
+                university: 'university',
+                degree: 'degree'
+            };
+
             const forms = [
                 {
                     id: "personalDetails",
@@ -1105,7 +1116,7 @@
                     title: "Educational background",
                     questions: [
                         {
-                            id: "educationCountry",
+                            id: store.reservedKeys.educationCountry,
                             question: "Country of degree attainment",
                             type: components.select,
                             props: {
@@ -1114,10 +1125,14 @@
                                     fetchOptionsFn: services.getCountries,
                                 }
                             },
-                            affects: ["educationLevel", "university", "degree"]
+                            affects: [
+                                store.reservedKeys.educationLevel,
+                                store.reservedKeys.university,
+                                store.reservedKeys.degree
+                            ]
                         },
                         {
-                            id: "educationLevel",
+                            id: store.reservedKeys.educationLevel,
                             question: "Highest level of education attained",
                             type: components.select,
                             props: {
@@ -1126,17 +1141,17 @@
                                     fetchOptionsFn: services.getDegreeTypes,
                                     params: {
                                         pageSize: 100,
-                                        educationCountry: null,
-                                        educationLevel: null
+                                        [store.reservedKeys.educationCountry]: null,
+                                        [store.reservedKeys.educationLevel]: null
                                     },
                                     callbackFn,
                                     stopPollingFn
                                 },
                             },
-                            affects: ["degree"]
+                            affects: [store.reservedKeys.degree]
                         },
                         {
-                            id: "university",
+                            id: store.reservedKeys.university,
                             question: "Complete University name",
                             type: components.select,
                             props: {
@@ -1145,7 +1160,7 @@
                                     fetchOptionsFn: services.getUniversities,
                                     params: {
                                         pageSize: 500,
-                                        educationCountry: null
+                                        [store.reservedKeys.educationCountry]: null
                                     },
                                     callbackFn,
                                     stopPollingFn
@@ -1153,7 +1168,7 @@
                             }
                         },
                         {
-                            id: "degree",
+                            id: store.reservedKeys.degree,
                             question: "Complete degree name",
                             type: components.select,
                             props: {
@@ -1162,8 +1177,8 @@
                                     fetchOptionsFn: services.getDegrees,
                                     params: {
                                         pageSize: 100,
-                                        educationCountry: null,
-                                        educationLevel: null
+                                        [store.reservedKeys.educationCountry]: null,
+                                        [store.reservedKeys.educationLevel]: null
                                     },
                                     callbackFn,
                                     stopPollingFn
