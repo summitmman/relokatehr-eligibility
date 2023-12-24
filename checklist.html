@@ -188,17 +188,18 @@
             };
             const serviceHelpers = {
                 [services.getCountries]: () => {
-                    // cached data for countries
+                    // return from cache?
                     if (store.countries !== null) {
-                        return Promise.resolve(store.countries).then(response => {
-                            return response.map(item => ({ label: item.name, value: item.code }));
-                        });
+                        return Promise.resolve([...store.countries]);
                     }
                     // else fetch from api
                     return getCountries()
                         .then((response) => {
-                            store.countries = response;
-                            return response.map(item => ({ label: item.name, value: item.code }));
+                            const options = response.map(item => ({ label: item.name, value: item.code }));
+                            // caching in store
+                            store.countries = [...options];
+
+                            return options;
                         });
                 },
                 [services.getUniversities]: (params) => {
@@ -208,12 +209,39 @@
                         params.countryCode = educationCountryOption.value;
                         params.country = educationCountryOption.label;
                     }
+
+                    // return from cache? depends on dynamic request params changing
+                    if (
+                        store.universities
+                        && params.countryCode
+                        && store.universities.params.countryCode == params.countryCode
+                        && !params.start
+                    ) {
+                        const response = {...store.universities.response, data: [...store.universities.response.data]};
+                        return Promise.resolve(response);
+                    }
+
                     return getUniversities(params)
                         .then((response) => {
                             if (!response) {
                                 throw new Error('Error fetch data from anabin');
                             }
-                            response.data = (response.data ?? []).map(item => ({label: item.university, value: item.uid}))
+                            response.data = (response.data ?? []).map(item => ({label: item.university, value: item.uid}));
+                            
+                            // caching in store
+                            if (!params.start || !store.universities) {
+                                store.universities = {
+                                    params: {...params},
+                                    response: {
+                                        totalDisplayRecords: 0,
+                                        totalResponse: 0,
+                                        data: []
+                                    }
+                                };
+                            }
+                            store.universities.params = {...params};
+                            store.universities.response.data.push(...response.data);
+                            
                             return response;
                         });
                 },
@@ -229,12 +257,40 @@
                     if (educationLevel && educationLevel !== 'undefined') {
                         params.degreeTypeId = educationLevel;
                     }
+
+                    // return from cache?
+                    if (
+                        store.degrees
+                        && params.countryCode
+                        && store.degrees.params.countryCode == params.countryCode
+                        && store.degrees.params.degreeTypeId == params.degreeTypeId
+                        && !params.start
+                    ) {
+                        const response = {...store.degrees.response, data: [...store.degrees.response.data]};
+                        return Promise.resolve(response);
+                    }
+
                     return getDegrees(params)
                         .then((response) => {
                             if (!response) {
                                 throw new Error('Error fetch data from anabin');
                             }
                             response.data = (response.data ?? []).map(item => ({label: item.degree, value: item.uid}));
+
+                            // caching in store
+                            if (!params.start || !store.degrees) {
+                                store.degrees = {
+                                    params: {...params},
+                                    response: {
+                                        totalDisplayRecords: 0,
+                                        totalResponse: 0,
+                                        data: []
+                                    }
+                                };
+                            }
+                            store.degrees.params = {...params};
+                            store.degrees.response.data.push(...response.data);
+
                             return response;
                         });
                 },
@@ -245,12 +301,39 @@
                         params.countryCode = educationCountryOption.value;
                         params.country = educationCountryOption.label;
                     }
+
+                    // return from cache?
+                    if (
+                        store.degreeTypes
+                        && params.countryCode
+                        && store.degreeTypes.params.countryCode == params.countryCode
+                        && !params.start
+                    ) {
+                        const response = {...store.degreeTypes.response, data: [...store.degreeTypes.response.data]};
+                        return Promise.resolve(response);
+                    }
+
                     return getDegreeTypes(params)
                         .then((response) => {
                             if (!response) {
                                 throw new Error('Error fetch data from anabin');
                             }
                             response.data = (response.data ?? []).map(item => ({label: item.degreeType, value: item.uid}));
+
+                            // caching in store
+                            if (!params.start || !store.degreeTypes) {
+                                store.degreeTypes = {
+                                    params: {...params},
+                                    response: {
+                                        totalDisplayRecords: 0,
+                                        totalResponse: 0,
+                                        data: []
+                                    }
+                                };
+                            }
+                            store.degreeTypes.params = {...params};
+                            store.degreeTypes.response.data.push(...response.data);
+
                             return response;
                         });
                 },
@@ -324,12 +407,15 @@
             };
 
             // FORM COMPONENTS
-            const createText = (item, events, parent) => {
+            const createText = (item, events, value, parent) => {
                 const { onChange } = events;
                 const input = createElement("input", parent);
                 input.classList.add('form-control');
                 input.setAttribute("type", "text");
                 input.setAttribute("id", item.id);
+                if (value != null && value !== '') {
+                    input.setAttribute("value", value);
+                }
                 if (item.props) {
                     if (item.props.placeholder) {
                         input.setAttribute("placeholder", item.props.placeholder);
@@ -344,11 +430,14 @@
 
                 return input;
             };
-            const createParagraph = (item, events, parent) => {
+            const createParagraph = (item, events, value, parent) => {
                 const { onChange } = events;
                 const input = createElement("textarea", parent);
                 input.classList.add('form-control');
                 input.setAttribute("id", item.id);
+                if (value != null && value !== '') {
+                    input.innerHTML = value;
+                }
                 if (item.props) {
                     if (item.props.placeholder) {
                         input.setAttribute("placeholder", item.props.placeholder);
@@ -364,7 +453,7 @@
 
                 return input;
             };
-            const createSelectOptions = (data = [], parent, clearPrevious = true, addDefaultOption = true) => {
+            const createSelectOptions = (data = [], value, parent, clearPrevious = true, addDefaultOption = true) => {
                 if (clearPrevious) {
                     parent.innerHTML = "";
 
@@ -383,19 +472,34 @@
                 if (addDefaultOption) {
                     data.unshift(defaultSelectOption);
                 }
-                
-                data.forEach((optionItem) => {
-                    const option = createElement("option", parent);
-                    option.setAttribute("value", optionItem.value);
-                    option.setAttribute("customoption", JSON.stringify(optionItem));
-                    option.innerHTML = optionItem.label;
-                });
-                parent.removeAttribute("disabled");
+
+                // to render long lists asynchronously
+                let index = 0;
+                const pageSize = 100;
+                const interval = setInterval(() => {
+                    data.slice(index, index + pageSize).forEach((optionItem) => {
+                        const option = createElement("option", parent);
+                        option.setAttribute("value", optionItem.value);
+                        option.setAttribute("customoption", JSON.stringify(optionItem));
+                        option.innerHTML = optionItem.label;
+
+                        if (value != null && value !== '' && value == optionItem.value) {
+                            parent.setAttribute("value", value);
+                            option.setAttribute("selected", true);
+                        }
+                    });
+
+                    index += pageSize;
+                    if (index >= data.length) {
+                        clearInterval(interval);
+                        parent.removeAttribute("disabled");
+                    }
+                }, 0);
             };
-            const populateSelectOptions = (dataOptions = [], addDefaultOption, events, select) => {
+            const populateSelectOptions = (dataOptions = [], addDefaultOption, events, value, select) => {
                 const { onChange, onChangeOption } = events;
                 if (Array.isArray(dataOptions)) {
-                    createSelectOptions(dataOptions, select, true, addDefaultOption);
+                    createSelectOptions(dataOptions, value, select, true, addDefaultOption);
                     if (onChange) {
                         onChange(select.value);
                     }
@@ -414,25 +518,21 @@
 
                     const callback = (response, localParams = {}, index) => {
                         const dataOptions = callbackFn ? (callbackFn(response, localParams) ?? []) : (response ?? []);
-                        createSelectOptions(dataOptions, select, !index, addDefaultOption);
+                        createSelectOptions(dataOptions, value, select, !index, addDefaultOption);
                     };
                     const catchFn = () => {
                         createSelectOptions(
                             [],
+                            value,
                             select,
                             true
                         );
                     };
                     const finallyFn = (response, localParams, index) => {
-                        if (!index) {
-                            if (events.onChange) {
-                                events.onChange(select.value);
-                            }
-                            if (events.onChangeOption) {
-                                const optionStr = select[select.selectedIndex]?.attributes?.customoption?.value;
-                                const option = optionStr ? JSON.parse(optionStr) : undefined;
-                                events.onChangeOption(option);
-                            }
+                        if (events.onChangeOption) {
+                            const optionStr = select[select.selectedIndex]?.attributes?.customoption?.value;
+                            const option = (optionStr && optionStr !== 'undefined') ? JSON.parse(optionStr) : undefined;
+                            events.onChangeOption(option);
                         }
                     };
                     const onMounted = () => {
@@ -450,13 +550,13 @@
                     onMounted();
                 }
             };
-            const createSelect = (item, events, parent) => {
+            const createSelect = (item, events, value, parent) => {
                 const { onChange, onChangeOption = () => {} } = events;
                 const select = createElement("select", parent);
                 select.setAttribute("id", item.id);
                 select.classList.add('form-select');
 
-                populateSelectOptions(item.props.options, item.props.addDefaultOption, events, select);
+                populateSelectOptions(item.props.options, item.props.addDefaultOption, events, value, select);
 
                 if (onChange) {
                     select.addEventListener('change', () => {
@@ -469,9 +569,10 @@
                 
                 return select;
             };
-            const createRadio = (item, events, parent) => {
+            const createRadio = (item, events, value, parent) => {
                 const { onChange } = events;
                 const radioGroup = [];
+                let defaultSelected = null;
                 item.props.options.forEach((optionItem, index) => {
                     const radioDiv = createElement("div", parent);
                     radioGroup.push(radioDiv);
@@ -484,19 +585,21 @@
                     radioEl.setAttribute("id", `${item.id}${index}`);
                     radioEl.setAttribute("value", optionItem.value);
 
+                    if (value != null && value !== '' && value === optionItem.value) {
+                        radioEl.setAttribute("checked", true);
+                    }
+
                     const label = createElement("label", radioDiv);
                     label.classList.add("form-check-label");
                     label.setAttribute("for", `${item.id}${index}`);
                     label.innerHTML = optionItem.label;
 
                     if (onChange) {
-                        radioEl.addEventListener("change", function () {
-                            onChange(this.value);
+                        radioEl.addEventListener("change", () => {
+                            onChange(radioEl.value);
                         })
                     }
                 });
-
-                
 
                 return radioGroup;
             };
@@ -709,14 +812,14 @@
                     if (params) {
                         // check if any key in the params are available in the output object
                         // if so then update the latest value in params
-                        Object.keys(params).forEach(key => {
-                            if (output[key] == null) {
+                        Object.keys(params).forEach(localKey => {
+                            if (output[localKey] == null) {
                                 return;
                             }
                             
-                            params[key] = output[key];
-                            if (output[`${key}Option`]) {
-                                params[`${key}Option`] = output[`${key}Option`];
+                            params[localKey] = output[localKey];
+                            if (output[`${localKey}Option`]) {
+                                params[`${localKey}Option`] = output[`${localKey}Option`];
                             }
                         });
                     }
@@ -728,6 +831,7 @@
                             onChange: (value) => { output[affectedItem.id] = value; },
                             onChangeOption: (value) => { output[`${affectedItem.id}Option`] = value; }
                         },
+                        output[key],
                         document.getElementById(affectedItem.id)
                     );
                 });
@@ -769,11 +873,11 @@
                 };
                 switch(item.type) {
                     case components.text: {
-                        return createText(item, { onChange: onLocalChange }, parent);
+                        return createText(item, { onChange: onLocalChange }, output[item.id], parent);
                         break;
                     }
                     case components.paragraph: {
-                        return createParagraph(item, { onChange: onLocalChange }, parent);
+                        return createParagraph(item, { onChange: onLocalChange }, output[item.id], parent);
                         break;
                     }
                     case components.select: {
@@ -785,15 +889,15 @@
                                 item.props.options = [];
                             }
                         }
-                        return createSelect(item, { onChange: onLocalChange, onChangeOption: (optionItem) => { output[`${item.id}Option`] = optionItem } }, parent);
+                        return createSelect(item, { onChange: onLocalChange, onChangeOption: (optionItem) => { output[`${item.id}Option`] = optionItem } }, output[item.id], parent);
                         break;
                     }
                     case components.radio: {
-                        return createRadio(item, { onChange: onLocalChange }, parent);
+                        return createRadio(item, { onChange: onLocalChange }, output[item.id], parent);
                         break;
                     }
                     default: {
-                        return createText(item, { onChange: onLocalChange }, parent);
+                        return createText(item, { onChange: onLocalChange }, output[item.id], parent);
                         break;
                     }
                 }
@@ -966,150 +1070,150 @@
             };
 
             const forms = [
-                {
-                    id: "personalDetails",
-                    name: "Personal Details",
-                    title: "Personal Details",
-                    questions: [
-                        {
-                            id: "surname",
-                            question: "Surname",
-                            type: components.text,
-                            props: {
-                                placeholder: "Enter your surname",
-                                validations: [
-                                    { type: validators.required, message: 'Please enter your surname' },
-                                    { type: validators.onlyAlphabets, message: 'Numbers are not allowed' }
-                                ],
-                            }
-                        },
-                        {
-                            id: "givenName",
-                            question: "Given Name",
-                            type: components.text,
-                            props: {
-                                placeholder: "Enter your given name"
-                            }
-                        },
-                        {
-                            id: "nationality",
-                            question: "Nationality",
-                            type: components.text,
-                            props: {
-                                placeholder: "Select your nationality",
-                                validations: [
-                                    { type: validators.required, message: 'Please enter your nationality' }
-                                ],
-                            }
-                        },
-                        {
-                            id: "dualCitizenship",
-                            question: "Posesses Dual Citizenship",
-                            type: components.radio,
-                            props: {
-                                options: [
-                                    { label: "Yes", value: "Yes" },
-                                    { label: "No", value: "No" },
-                                ],
-                                validations: [
-                                    { type: validators.required, message: 'Please select an option' },
-                                ],
-                            }
-                        },
-                        {
-                            id: "citizenshipList",
-                            question: "If yes, please list",
-                            type: components.paragraph,
-                            props: {
-                                placeholder: "List of citizenships",
-                                validations: [
-                                    { type: validators.required, message: 'Please enter the list citizenships' }
-                                ],
-                            }
-                        },
-                    ]
-                },
-                {
-                    id: "residenceDetails",
-                    name: "Residence Details",
-                    title: "Residence and travel information",
-                    questions: [
-                        {
-                            id: "duration",
-                            question: "Intended duration of residency in Germany",
-                            type: components.text,
-                            props: {
-                                placeholder: "in years"
-                            }
-                        },
-                        {
-                            id: "previousVisit",
-                            question: "Have you previously visited Germany?",
-                            type: components.radio,
-                            props: {
-                                options: [
-                                    { label: "Yes", value: "Yes" },
-                                    { label: "No", value: "No" },
-                                ]
-                            }
-                        },
-                        {
-                            id: "visitDates",
-                            question: "If yes, please list all dates",
-                            type: components.paragraph,
-                            props: {
-                                placeholder: "enter to and from dates on different lines"
-                            }
-                        },
-                        {
-                            id: "currentResidence",
-                            question: "Current place of residence",
-                            type: components.text,
-                            props: {
-                                placeholder: "Current country and province/state"
-                            }
-                        },
-                    ]
-                },
-                {
-                    id: "professionalDetails",
-                    name: "Professional Details",
-                    title: "Professional background",
-                    questions: [
-                        {
-                            id: "purpose",
-                            question: "Purpose of your visit to Germany",
-                            type: components.text,
-                            props: {
-                                placeholder: "Enter the purpose"
-                            }
-                        },
-                        {
-                            id: "expertise",
-                            question: "Primary area of expertise",
-                            type: components.text,
-                            props: {
-                                placeholder: "industry or field"
-                            }
-                        },
-                        {
-                            id: "interestedPositions",
-                            question: "Positions you are interested in (list five)",
-                            type: components.paragraph,
-                            props: {
-                                placeholder: "list on different lines"
-                            }
-                        },
-                        {
-                            id: "experience",
-                            question: "Total professional experience",
-                            type: components.text,
-                            props: {
-                                placeholder: "in years"
-                            }
-                        },
-                    ]
-                },
+                // {
+                //     id: "personalDetails",
+                //     name: "Personal Details",
+                //     title: "Personal Details",
+                //     questions: [
+                //         {
+                //             id: "surname",
+                //             question: "Surname",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "Enter your surname",
+                //                 validations: [
+                //                     { type: validators.required, message: 'Please enter your surname' },
+                //                     { type: validators.onlyAlphabets, message: 'Numbers are not allowed' }
+                //                 ],
+                //             }
+                //         },
+                //         {
+                //             id: "givenName",
+                //             question: "Given Name",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "Enter your given name"
+                //             }
+                //         },
+                //         {
+                //             id: "nationality",
+                //             question: "Nationality",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "Select your nationality",
+                //                 validations: [
+                //                     { type: validators.required, message: 'Please enter your nationality' }
+                //                 ],
+                //             }
+                //         },
+                //         {
+                //             id: "dualCitizenship",
+                //             question: "Posesses Dual Citizenship",
+                //             type: components.radio,
+                //             props: {
+                //                 options: [
+                //                     { label: "Yes", value: "Yes" },
+                //                     { label: "No", value: "No" },
+                //                 ],
+                //                 validations: [
+                //                     { type: validators.required, message: 'Please select an option' },
+                //                 ],
+                //             }
+                //         },
+                //         {
+                //             id: "citizenshipList",
+                //             question: "If yes, please list",
+                //             type: components.paragraph,
+                //             props: {
+                //                 placeholder: "List of citizenships",
+                //                 validations: [
+                //                     { type: validators.required, message: 'Please enter the list citizenships' }
+                //                 ],
+                //             }
+                //         },
+                //     ]
+                // },
+                // {
+                //     id: "residenceDetails",
+                //     name: "Residence Details",
+                //     title: "Residence and travel information",
+                //     questions: [
+                //         {
+                //             id: "duration",
+                //             question: "Intended duration of residency in Germany",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "in years"
+                //             }
+                //         },
+                //         {
+                //             id: "previousVisit",
+                //             question: "Have you previously visited Germany?",
+                //             type: components.radio,
+                //             props: {
+                //                 options: [
+                //                     { label: "Yes", value: "Yes" },
+                //                     { label: "No", value: "No" },
+                //                 ]
+                //             }
+                //         },
+                //         {
+                //             id: "visitDates",
+                //             question: "If yes, please list all dates",
+                //             type: components.paragraph,
+                //             props: {
+                //                 placeholder: "enter to and from dates on different lines"
+                //             }
+                //         },
+                //         {
+                //             id: "currentResidence",
+                //             question: "Current place of residence",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "Current country and province/state"
+                //             }
+                //         },
+                //     ]
+                // },
+                // {
+                //     id: "professionalDetails",
+                //     name: "Professional Details",
+                //     title: "Professional background",
+                //     questions: [
+                //         {
+                //             id: "purpose",
+                //             question: "Purpose of your visit to Germany",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "Enter the purpose"
+                //             }
+                //         },
+                //         {
+                //             id: "expertise",
+                //             question: "Primary area of expertise",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "industry or field"
+                //             }
+                //         },
+                //         {
+                //             id: "interestedPositions",
+                //             question: "Positions you are interested in (list five)",
+                //             type: components.paragraph,
+                //             props: {
+                //                 placeholder: "list on different lines"
+                //             }
+                //         },
+                //         {
+                //             id: "experience",
+                //             question: "Total professional experience",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "in years"
+                //             }
+                //         },
+                //     ]
+                // },
                 {
                     id: "educationDetails",
                     name: "Education Details",
