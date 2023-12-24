@@ -138,24 +138,39 @@
                         return response;
                     });
             };
-            const getUniversities = (params = { pageSize: 1000 }) => {
+            const getUniversities = (params = { pageSize: 1000, start: 0 }) => {
                 if (!params?.countryCode || !params?.country) {
                     return Promise.reject("Mandatory params not available");
                 }
+                params.start = params.start ?? 0;
                 const url = 'http://localhost:3000/universities';
-                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}`;
+                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&start=${params.start}`;
                 return fetch(`${url}${query}`)
                     .then((response) => response.json())
                     .then((response) => {
                         return response;
                     });
             };
-            const getDegrees = (params = { pageSize: 1000 }) => {
+            const getDegrees = (params = { pageSize: 1000, start: 0 }) => {
                 if (!params?.countryCode || !params?.country || !params?.degreeTypeId) {
                     return Promise.reject("Mandatory params not available");
                 }
+                params.start = params.start ?? 0;
                 const url = 'http://localhost:3000/degrees';
-                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&degreeTypeId=${params.degreeTypeId}`;
+                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&degreeTypeId=${params.degreeTypeId}&start=${params.start}`;
+                return fetch(`${url}${query}`)
+                    .then((response) => response.json())
+                    .then((response) => {
+                        return response;
+                    });
+            };
+            const getDegreeTypes = (params = { pageSize: 1000, start: 0 }) => {
+                if (!params?.countryCode || !params?.country) {
+                    return Promise.reject("Mandatory params not available");
+                }
+                params.start = params.start ?? 0;
+                const url = 'http://localhost:3000/degreeTypes';
+                let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&start=${params.start}`;
                 return fetch(`${url}${query}`)
                     .then((response) => response.json())
                     .then((response) => {
@@ -168,7 +183,8 @@
             const services = {
                 getCountries: "getCountries",
                 getUniversities: "getUniversities",
-                getDegrees: "getDegrees"
+                getDegrees: "getDegrees",
+                getDegreeTypes: "getDegreeTypes"
             };
             const serviceHelpers = {
                 [services.getCountries]: () => {
@@ -186,15 +202,52 @@
                         });
                 },
                 [services.getUniversities]: (params) => {
+                    // country and countryCode
+                    if (params.educationCountryOption) {
+                        params.countryCode = params.educationCountryOption.value;
+                        params.country = params.educationCountryOption.label;
+                    }
                     return getUniversities(params)
                         .then((response) => {
-                            return (response.data ?? []).map(item => ({label: item.university, value: item.uid}));
+                            if (!response) {
+                                throw new Error('Error fetch data from anabin');
+                            }
+                            response.data = (response.data ?? []).map(item => ({label: item.university, value: item.uid}))
+                            return response;
                         });
                 },
                 [services.getDegrees]: (params) => {
+                    // country and countryCode
+                    if (params.educationCountryOption) {
+                        params.countryCode = params.educationCountryOption.value;
+                        params.country = params.educationCountryOption.label;
+                    }
+                    // degreeTypeId
+                    if (params.educationLevel && params.educationLevel !== 'undefined') {
+                        params.degreeTypeId = params.educationLevel;
+                    }
                     return getDegrees(params)
                         .then((response) => {
-                            return (response.data ?? []).map(item => ({label: item.degree, value: item.uid}));
+                            if (!response) {
+                                throw new Error('Error fetch data from anabin');
+                            }
+                            response.data = (response.data ?? []).map(item => ({label: item.degree, value: item.uid}));
+                            return response;
+                        });
+                },
+                [services.getDegreeTypes]: (params) => {
+                    // country and countryCode
+                    if (params.educationCountryOption) {
+                        params.countryCode = params.educationCountryOption.value;
+                        params.country = params.educationCountryOption.label;
+                    }
+                    return getDegreeTypes(params)
+                        .then((response) => {
+                            if (!response) {
+                                throw new Error('Error fetch data from anabin');
+                            }
+                            response.data = (response.data ?? []).map(item => ({label: item.degreeType, value: item.uid}));
+                            return response;
                         });
                 },
             };
@@ -204,7 +257,8 @@
                 serviceHelpers,
                 getCountries,
                 getUniversities,
-                getDegrees
+                getDegrees,
+                getDegreeTypes
             };
         };
 
@@ -216,6 +270,10 @@
                 radio: "radio",
                 paragraph: "paragraph"
             };
+            const defaultSelectOption = {
+                label: 'Select an option',
+                value: undefined
+            };
 
             // UTILS
             const createElement = (el, parent) => {
@@ -223,51 +281,20 @@
                 parent.appendChild(element);
                 return element;
             };
-            // populates options for select tag
-            // supports array as well as promise/api calls
-            // can be used to repopulate the select tag
-            const populateSelectOptions = (options, apiParams, events, parentSelect) => {
-                if (!parentSelect) {
-                    return;
-                }
-                if (typeof options === "function") {
-                    parentSelect.setAttribute("disabled", "true");
-                    const option = createElement("option", parentSelect);
-                    option.innerHTML = "Loading...";
-
-                    options(apiParams)
-                        .then((response) => {
-                            if (!response.length) {
-                                throw new Error('No options loaded');
-                            }
-                            parentSelect.innerHTML = "";
-                            response.forEach((optionItem) => {
-                                const optionEl = createElement("option", parentSelect);
-                                optionEl.setAttribute("value", optionItem.value);
-                                optionEl.innerHTML = optionItem.label;
-                            });
-                            parentSelect.removeAttribute("disabled");
-                        })
-                        .catch((exception) => {
-                            parentSelect.innerHTML = "";
-                            const optionEl = createElement("option", parentSelect);
-                            optionEl.innerHTML = "No options loaded";
-                        }).finally(() => {
-                            if (events.onChange) {
-                                events.onChange(parentSelect.value);
-                            }
-                        });
-                } else {
-                    parentSelect.innerHTML = "";
-                    options.forEach((optionItem) => {
-                        const option = createElement("option", parentSelect);
-                        option.setAttribute("value", optionItem.value);
-                        option.innerHTML = optionItem.label;
+            const syncPoll = (fnToPoll, params, callback, next, catchFn, finallyFn, num = 0) => {
+                const finalParams = params ?? {};
+                fnToPoll(params) // here params is intentional
+                    .then(response => {
+                        callback(response, finalParams, num);
+                        const nextParams = next ? next(response, finalParams, num) : false;
+                        if (nextParams) {
+                            syncPoll(fnToPoll, nextParams, callback, next, catchFn, finallyFn, num + 1);
+                        }
+                    })
+                    .catch(catchFn)
+                    .finally(() => {
+                        finallyFn(finalParams, num);
                     });
-                    if (events.onChange) {
-                        events.onChange(parentSelect.value);
-                    }
-                }
             };
 
             // COMPONENTS
@@ -333,16 +360,105 @@
 
                 return input;
             };
+            const createSelectOptions = (data = [], parent, clearPrevious = true, addDefaultOption = true) => {
+                if (clearPrevious) {
+                    parent.innerHTML = "";
+
+                    if (!data.length) {
+                        const option = createElement("option", parent);
+                        option.setAttribute("value", undefined);
+                        option.setAttribute("customoption", undefined);
+                        option.innerHTML = "No Options Loaded";
+
+                        parent.setAttribute("disabled", true);
+
+                        return;
+                    }
+                }
+
+                if (addDefaultOption) {
+                    data.unshift(defaultSelectOption);
+                }
+                
+                data.forEach((optionItem) => {
+                    const option = createElement("option", parent);
+                    option.setAttribute("value", optionItem.value);
+                    option.setAttribute("customoption", JSON.stringify(optionItem));
+                    option.innerHTML = optionItem.label;
+                });
+                parent.removeAttribute("disabled");
+            };
+            const populateSelectOptions = (dataOptions = [], addDefaultOption, events, select) => {
+                const { onChange, onChangeOption } = events;
+                if (Array.isArray(dataOptions)) {
+                    createSelectOptions(dataOptions, select, true, addDefaultOption);
+                    if (onChange) {
+                        onChange(select.value);
+                    }
+                    if (onChangeOption) {
+                        const optionStr = select[select.selectedIndex]?.attributes?.customoption?.value;
+                        const option = optionStr ? JSON.parse(optionStr) : undefined;
+                        onChangeOption(option);
+                    }
+                } else {
+                    const {
+                        fetchOptionsFn,
+                        params,
+                        callbackFn,
+                        stopPollingFn
+                    } = dataOptions;
+
+                    const callback = (response, localParams = {}, index) => {
+                        const dataOptions = callbackFn ? (callbackFn(response, localParams) ?? []) : (response ?? []);
+                        createSelectOptions(dataOptions, select, !index, addDefaultOption);
+                    };
+                    const catchFn = () => {
+                        createSelectOptions(
+                            [],
+                            select,
+                            true
+                        );
+                    };
+                    const finallyFn = (response, localParams, index) => {
+                        if (!index) {
+                            if (events.onChange) {
+                                events.onChange(select.value);
+                            }
+                            if (events.onChangeOption) {
+                                const optionStr = select[select.selectedIndex]?.attributes?.customoption?.value;
+                                const option = optionStr ? JSON.parse(optionStr) : undefined;
+                                events.onChangeOption(option);
+                            }
+                        }
+                    };
+                    const onMounted = () => {
+                        if (!fetchOptionsFn) {
+                            catchFn();
+                            return;
+                        }
+                        const fnToPoll = 
+
+                        select.setAttribute("disabled", "true");
+                        const option = createElement("option", select);
+                        option.innerHTML = "Loading...";
+                        syncPoll(fetchOptionsFn, params ?? {}, callback, stopPollingFn, catchFn, finallyFn);
+                    };
+                    onMounted();
+                }
+            };
             const createSelect = (item, events, parent) => {
-                const { onChange } = events;
+                const { onChange, onChangeOption = () => {} } = events;
                 const select = createElement("select", parent);
                 select.setAttribute("id", item.id);
                 select.classList.add('form-select');
 
-                populateSelectOptions(item.props.options ?? [], item.props.apiParams, events, select);
+                populateSelectOptions(item.props.options, item.props.addDefaultOption, events, select);
 
                 if (onChange) {
                     select.addEventListener('change', () => {
+                        const optionStr = select[select.selectedIndex]?.attributes?.customoption?.value;
+                        const option = optionStr ? JSON.parse(optionStr) : undefined;
+                        onChangeOption(option);
                         onChange(select.value);
                     });
                 }
@@ -395,6 +511,7 @@
                 createText,
                 createParagraph,
                 createSelect,
+                createSelectOptions,
                 createRadio
             };
         };
@@ -535,7 +652,8 @@
                 createButton,
                 createSelect,
                 createPrompt,
-                createRadio
+                createRadio,
+                populateSelectOptions
             } = useComponents();
             const {
                 createValidationUI,
@@ -551,12 +669,72 @@
 
             const animationTime = 300;
 
+            const repopulateAffectedSelects = (localValue, localItem, localForms, localOutput) => {
+                if (!localItem.affects?.length) {
+                    return;
+                }
+
+                const affectedItems = {};
+                localItem.affects.forEach(id => {
+                    // Get all affected field schemas
+                    forms.forEach(form => {
+                        (form.questions || []).forEach(questionItem => {
+                            if (questionItem.id === id) {
+                                affectedItems[id] = questionItem;
+                            }
+                        });
+                    });
+                });
+
+                if (!Object.keys(affectedItems).length) {
+                    return;
+                }
+                
+                Object.keys(affectedItems).forEach(key => {
+                    const affectedItem = affectedItems[key];
+                    // checks for each affected field which is a select field
+                    // and has a promise, which means it will dynamically update
+                    // if static array or undefined .. no action required
+                    if (affectedItem.type !== components.select) {
+                        return;
+                    }
+                    
+                    // need to call apis
+                    // prepare apiParams first
+                    const { params } = affectedItem.props.options;
+                    if (params) {
+                        // check if any key in the params are available in the output object
+                        // if so then update the latest value in params
+                        Object.keys(params).forEach(key => {
+                            if (output[key] == null) {
+                                return;
+                            }
+                            
+                            params[key] = output[key];
+                            if (output[`${key}Option`]) {
+                                params[`${key}Option`] = output[`${key}Option`];
+                            }
+                        });
+                    }
+                    // re-populate the affected select options
+                    populateSelectOptions(
+                        affectedItem.props.options,
+                        affectedItem.props.addDefaultOption,
+                        {
+                            onChange: (value) => { output[affectedItem.id] = value; },
+                            onChangeOption: (value) => { output[`${affectedItem.id}Option`] = value; }
+                        },
+                        document.getElementById(affectedItem.id)
+                    );
+                });
+            };
             // common change event, when any form element is changed
             const onChange = (value, item) => {
                 // Update output
                 output[item.id] = value;
-                // Check affects dependencies and delete their values
+                // Manage affected dependencies
                 if (item.affects?.length) {
+                    // Check affects dependencies and delete their values (DATA - all types of components)
                     item.affects.forEach(id => {
                         if (item.type === components.radio) {
                             const els = document.getElementsByName(id);
@@ -573,7 +751,10 @@
                         }
 
                         output[id] = undefined;
+                        output[`${id}Option`] = undefined;
                     });
+                    // Check affects dependencies and repopulate its options (UI - Select)
+                    repopulateAffectedSelects(value, item, forms, output);
                 }
                 onOutputChange(value, item, forms, output);
             };
@@ -592,10 +773,15 @@
                         break;
                     }
                     case components.select: {
-                        if (typeof item.props.options === 'string') {
-                            item.props.options = serviceHelpers[item.props.options] ?? [];
+                        if (!Array.isArray(item.props.options) && typeof item.props.options.fetchOptionsFn === 'string') {
+                            const helperFn = serviceHelpers[item.props.options.fetchOptionsFn];
+                            if (helperFn) {
+                                item.props.options.fetchOptionsFn = helperFn;
+                            } else {
+                                item.props.options = [];
+                            }
                         }
-                        return createSelect(item, { onChange: onLocalChange }, parent);
+                        return createSelect(item, { onChange: onLocalChange, onChangeOption: (optionItem) => { output[`${item.id}Option`] = optionItem } }, parent);
                         break;
                     }
                     case components.radio: {
@@ -754,6 +940,20 @@
             } = useValidations();
             const { services } = useServices();
 
+            const callbackFn = (response) => response.data;
+            const stopPollingFn = (response, localParams = {}) => {
+                const { start = 0, pageSize = 0 } = localParams;
+                const { totalResponse = 0, totalDisplayRecords = 0 } = response;
+
+                const currentRecords = start + pageSize;
+                if (currentRecords < totalDisplayRecords) {
+                    return {
+                        ...localParams,
+                        start: currentRecords
+                    };
+                }
+            };
+
             const forms = [
                 {
                     id: "personalDetails",
@@ -905,35 +1105,35 @@
                     title: "Educational background",
                     questions: [
                         {
-                            id: "educationLevel",
-                            question: "Highest level of education attained",
-                            type: components.select,
-                            props: {
-                                placeholder: "Select level",
-                                options: [
-                                    { label: "Bachelor (3-jährig)", value: 3283 },
-                                    { label: "Bachelor (4-jährig)", value: 3288 },
-                                    { label: "Bachelor (4,5- bis 5,5-jährig)", value: 3348 },
-                                    { label: "Doctor of Philosophy", value: 494 },
-                                    { label: "Integrated Master's Degree / Dual Degree", value: 3293 },
-                                    { label: "Master (2-jährig)", value: 2301 },
-                                    { label: "Master (3-Jährig)", value: 3004 },
-                                    { label: "Master of Philosophy", value: 836 },
-                                    { label: "Postgraduate Bachelor", value: 3350 },
-                                    { label: "Postgraduate Diploma", value: 3349  }
-                                ]
-                            },
-                            affects: ["degree"]
-                        },
-                        {
                             id: "educationCountry",
                             question: "Country of degree attainment",
                             type: components.select,
                             props: {
                                 placeholder: "Select country",
-                                options: services.getCountries,
+                                options: {
+                                    fetchOptionsFn: services.getCountries,
+                                }
                             },
-                            affects: ["university", "degree"]
+                            affects: ["educationLevel", "university", "degree"]
+                        },
+                        {
+                            id: "educationLevel",
+                            question: "Highest level of education attained",
+                            type: components.select,
+                            props: {
+                                placeholder: "Select level",
+                                options: {
+                                    fetchOptionsFn: services.getDegreeTypes,
+                                    params: {
+                                        pageSize: 100,
+                                        educationCountry: null,
+                                        educationLevel: null
+                                    },
+                                    callbackFn,
+                                    stopPollingFn
+                                },
+                            },
+                            affects: ["degree"]
                         },
                         {
                             id: "university",
@@ -941,11 +1141,15 @@
                             type: components.select,
                             props: {
                                 placeholder: "Select university name",
-                                options: services.getUniversities,
-                                apiParams: {
-                                    pageSize: 100,
-                                    educationCountry: null
-                                }
+                                options: {
+                                    fetchOptionsFn: services.getUniversities,
+                                    params: {
+                                        pageSize: 500,
+                                        educationCountry: null
+                                    },
+                                    callbackFn,
+                                    stopPollingFn
+                                },
                             }
                         },
                         {
@@ -954,12 +1158,16 @@
                             type: components.select,
                             props: {
                                 placeholder: "Select degree name",
-                                options: services.getDegrees,
-                                apiParams: {
-                                    pageSize: 100,
-                                    educationCountry: null,
-                                    educationLevel: null
-                                }
+                                options: {
+                                    fetchOptionsFn: services.getDegrees,
+                                    params: {
+                                        pageSize: 100,
+                                        educationCountry: null,
+                                        educationLevel: null
+                                    },
+                                    callbackFn,
+                                    stopPollingFn
+                                },
                             }
                         },
                         {
@@ -1034,81 +1242,6 @@
                 questionSection.innerHTML = 'Thank you for filling the survey';
                 submitSection.innerHTML = '';
             };
-            // this function is used to detect change in field which affects others and further populates the new option list for select tag for now
-            const onOutputChange = (localValue, localItem, localForms, localOutput) => {
-                if (!localItem.affects?.length) {
-                    return;
-                }
-
-                const affectedItems = {};
-                localItem.affects.forEach(id => {
-                    // Get all affected field schemas
-                    forms.forEach(form => {
-                        (form.questions || []).forEach(questionItem => {
-                            if (questionItem.id === id) {
-                                affectedItems[id] = questionItem;
-                            }
-                        });
-                    });
-                });
-
-                if (!Object.keys(affectedItems).length) {
-                    return;
-                }
-                
-                Object.keys(affectedItems).forEach(key => {
-                    const affectedItem = affectedItems[key];
-                    // checks for each affected field which is a select field
-                    // and has a promise, which means it will dynamically update
-                    // if static array or undefined .. no action required
-                    if (
-                        affectedItem.type !== components.select
-                        || (
-                            typeof affectedItem.props?.options !== 'string'
-                            && typeof affectedItem.props?.options !== 'function'
-                        )
-                    ) {
-                        return;
-                    }
-                    
-                    // need to call apis
-                    // prepare apiParams first
-                    const { apiParams } = affectedItem.props;
-                    if (apiParams) {
-                        // check if any key in the apiParams are available in the output object
-                        // if so then update the latest value in apiParams
-                        Object.keys(apiParams).forEach(key => {
-                            if (output[key] == null) {
-                                return;
-                            }
-                            
-                            apiParams[key] = output[key];
-                            // some params need to be renamed/duplicated because of the api param names
-                            // country and countryCode
-                            if (apiParams[key] && key.toLocaleLowerCase().includes('country')) {
-                                apiParams.countryCode = apiParams[key];
-                                const country = (store.countries ?? []).find(item => item.code == apiParams.countryCode);
-                                if (country) {
-                                    apiParams.country = country.name;
-                                }
-                            }
-                            // degreeTypeId
-                            if (apiParams[key] && key === 'educationLevel') {
-                                apiParams.degreeTypeId = apiParams[key];
-                            }
-                        });
-                    }
-                    // re-populate the affected select options
-                    populateSelectOptions(
-                        affectedItem.props.options,
-                        affectedItem.props.apiParams,
-                        {
-                            onChange: (value) => { output[affectedItem.id] = value; }
-                        },
-                        document.getElementById(affectedItem.id)
-                    );
-                });
-            };
 
             const {
                 init
@@ -1118,7 +1251,6 @@
                     onSubmit,
                     onBack,
                     onFinalSubmit,
-                    onOutputChange,
                 },
                 output,
                 app,

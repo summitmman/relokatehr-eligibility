@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "d32169d6-f6d9-492c-aee0-4e4839e89806",
 		"name": "Anabin extended",
-		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "3317859"
 	},
 	"item": [
@@ -12,7 +12,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "localhost:3000/degrees?sEcho=1&country=India&countryCode=129&start=0&pageSize=20",
+					"raw": "localhost:3000/degrees?sEcho=1&country=India&countryCode=129&start=0&pageSize=20&degreeTypeId=3004",
 					"host": [
 						"localhost"
 					],
@@ -40,6 +40,10 @@
 						{
 							"key": "pageSize",
 							"value": "20"
+						},
+						{
+							"key": "degreeTypeId",
+							"value": "3004"
 						}
 					]
 				}
@@ -51,7 +55,16 @@
 			"request": {
 				"method": "GET",
 				"header": [],
-				"url": "localhost:3000/countries"
+				"url": {
+					"raw": "localhost:3000/countries",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"countries"
+					]
+				}
 			},
 			"response": []
 		},
@@ -61,7 +74,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "localhost:3000/universities?sEcho=1&country=India&countryCode=129&university=Mumbai&start=0&pageSize=10",
+					"raw": "localhost:3000/universities?sEcho=123&country=India&countryCode=129&university=Mumbai&start=0&pageSize=100",
 					"host": [
 						"localhost"
 					],
@@ -72,7 +85,7 @@
 					"query": [
 						{
 							"key": "sEcho",
-							"value": "1"
+							"value": "123"
 						},
 						{
 							"key": "country",
@@ -92,7 +105,7 @@
 						},
 						{
 							"key": "pageSize",
-							"value": "10"
+							"value": "100"
 						}
 					]
 				}
@@ -141,6 +154,46 @@
 						{
 							"key": "universityId",
 							"value": "6935"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "degreeTypes",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:3000/degreeTypes?sEcho=1&country=Afghanistan&countryCode=225&start=0&pageSize=20",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"degreeTypes"
+					],
+					"query": [
+						{
+							"key": "sEcho",
+							"value": "1"
+						},
+						{
+							"key": "country",
+							"value": "Afghanistan"
+						},
+						{
+							"key": "countryCode",
+							"value": "225"
+						},
+						{
+							"key": "start",
+							"value": "0"
+						},
+						{
+							"key": "pageSize",
+							"value": "20"
 						}
 					]
 				}

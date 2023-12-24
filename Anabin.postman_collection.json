@@ -1,0 +1,557 @@
+{
+	"info": {
+		"_postman_id": "3c14ba3f-be28-43d4-8ccc-a01ce7b20da4",
+		"name": "Anabin",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "3317859"
+	},
+	"item": [
+		{
+			"name": "Anabin degree call",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "authority",
+						"value": "anabin.kmk.org"
+					},
+					{
+						"key": "accept",
+						"value": "application/json, text/javascript, */*; q=0.01"
+					},
+					{
+						"key": "accept-language",
+						"value": "en-IN,en;q=0.9,ur-IN;q=0.8,ur;q=0.7,en-GB;q=0.6,en-US;q=0.5"
+					},
+					{
+						"key": "referer",
+						"value": "https://anabin.kmk.org/no_cache/filter/hochschulabschluesse.html"
+					},
+					{
+						"key": "sec-ch-ua",
+						"value": "\"Google Chrome\";v=\"119\", \"Chromium\";v=\"119\", \"Not?A_Brand\";v=\"24\""
+					},
+					{
+						"key": "sec-ch-ua-mobile",
+						"value": "?0"
+					},
+					{
+						"key": "sec-ch-ua-platform",
+						"value": "\"Windows\""
+					},
+					{
+						"key": "sec-fetch-dest",
+						"value": "empty"
+					},
+					{
+						"key": "sec-fetch-mode",
+						"value": "cors"
+					},
+					{
+						"key": "sec-fetch-site",
+						"value": "same-origin"
+					},
+					{
+						"key": "user-agent",
+						"value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+					},
+					{
+						"key": "x-requested-with",
+						"value": "XMLHttpRequest"
+					}
+				],
+				"url": {
+					"raw": "https://anabin.kmk.org/index.php?eID=user_anabin_abschluesse&conf=abschlussergebnisliste&sEcho=1&iColumns=11&iDisplayStart=0&iDisplayLength=20&bRegex=false&sSearch_8=India&iSortingCols=1&iSortCol_0=2&sSortDir_0=asc&land=129&s1=Computer+Application&iDataIds=1",
+					"protocol": "https",
+					"host": [
+						"anabin",
+						"kmk",
+						"org"
+					],
+					"path": [
+						"index.php"
+					],
+					"query": [
+						{
+							"key": "eID",
+							"value": "user_anabin_abschluesse"
+						},
+						{
+							"key": "conf",
+							"value": "abschlussergebnisliste"
+						},
+						{
+							"key": "sEcho",
+							"value": "1"
+						},
+						{
+							"key": "iColumns",
+							"value": "11"
+						},
+						{
+							"key": "iDisplayStart",
+							"value": "0"
+						},
+						{
+							"key": "iDisplayLength",
+							"value": "20"
+						},
+						{
+							"key": "bRegex",
+							"value": "false"
+						},
+						{
+							"key": "sSearch_8",
+							"value": "India"
+						},
+						{
+							"key": "iSortingCols",
+							"value": "1"
+						},
+						{
+							"key": "iSortCol_0",
+							"value": "2"
+						},
+						{
+							"key": "sSortDir_0",
+							"value": "asc"
+						},
+						{
+							"key": "land",
+							"value": "129"
+						},
+						{
+							"key": "s1",
+							"value": "Computer+Application"
+						},
+						{
+							"key": "iDataIds",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Anabin university call",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "authority",
+						"value": "anabin.kmk.org"
+					},
+					{
+						"key": "accept",
+						"value": "application/json, text/javascript, */*; q=0.01"
+					},
+					{
+						"key": "accept-language",
+						"value": "en-IN,en;q=0.9,ur-IN;q=0.8,ur;q=0.7,en-GB;q=0.6,en-US;q=0.5"
+					},
+					{
+						"key": "referer",
+						"value": "https://anabin.kmk.org/no_cache/filter/institutionen.html"
+					},
+					{
+						"key": "sec-ch-ua",
+						"value": "\"Google Chrome\";v=\"119\", \"Chromium\";v=\"119\", \"Not?A_Brand\";v=\"24\""
+					},
+					{
+						"key": "sec-ch-ua-mobile",
+						"value": "?0"
+					},
+					{
+						"key": "sec-ch-ua-platform",
+						"value": "\"Windows\""
+					},
+					{
+						"key": "sec-fetch-dest",
+						"value": "empty"
+					},
+					{
+						"key": "sec-fetch-mode",
+						"value": "cors"
+					},
+					{
+						"key": "sec-fetch-site",
+						"value": "same-origin"
+					},
+					{
+						"key": "user-agent",
+						"value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+					},
+					{
+						"key": "x-requested-with",
+						"value": "XMLHttpRequest"
+					}
+				],
+				"url": {
+					"raw": "https://anabin.kmk.org/index.php?eID=user_anabin_institutionen&conf=institutionsergebnisliste&sEcho=18&iColumns=13&iDisplayStart=0&iDisplayLength=10&bRegex=false&sSearch_6=India&iSortingCols=1&iSortCol_0=2&sSortDir_0=asc&land=129&s1=Mumbai&iDataIds=1",
+					"protocol": "https",
+					"host": [
+						"anabin",
+						"kmk",
+						"org"
+					],
+					"path": [
+						"index.php"
+					],
+					"query": [
+						{
+							"key": "eID",
+							"value": "user_anabin_institutionen"
+						},
+						{
+							"key": "conf",
+							"value": "institutionsergebnisliste"
+						},
+						{
+							"key": "sEcho",
+							"value": "18"
+						},
+						{
+							"key": "iColumns",
+							"value": "13"
+						},
+						{
+							"key": "iDisplayStart",
+							"value": "0"
+						},
+						{
+							"key": "iDisplayLength",
+							"value": "10"
+						},
+						{
+							"key": "bRegex",
+							"value": "false"
+						},
+						{
+							"key": "sSearch_6",
+							"value": "India"
+						},
+						{
+							"key": "iSortingCols",
+							"value": "1"
+						},
+						{
+							"key": "iSortCol_0",
+							"value": "2"
+						},
+						{
+							"key": "sSortDir_0",
+							"value": "asc"
+						},
+						{
+							"key": "land",
+							"value": "129"
+						},
+						{
+							"key": "s1",
+							"value": "Mumbai"
+						},
+						{
+							"key": "iDataIds",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Anabin degree detail call",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "authority",
+						"value": "anabin.kmk.org"
+					},
+					{
+						"key": "accept",
+						"value": "*/*"
+					},
+					{
+						"key": "accept-language",
+						"value": "en-IN,en;q=0.9,ur-IN;q=0.8,ur;q=0.7,en-GB;q=0.6,en-US;q=0.5"
+					},
+					{
+						"key": "referer",
+						"value": "https://anabin.kmk.org/no_cache/filter/hochschulabschluesse.html"
+					},
+					{
+						"key": "sec-ch-ua",
+						"value": "\"Google Chrome\";v=\"119\", \"Chromium\";v=\"119\", \"Not?A_Brand\";v=\"24\""
+					},
+					{
+						"key": "sec-ch-ua-mobile",
+						"value": "?0"
+					},
+					{
+						"key": "sec-ch-ua-platform",
+						"value": "\"Windows\""
+					},
+					{
+						"key": "sec-fetch-dest",
+						"value": "empty"
+					},
+					{
+						"key": "sec-fetch-mode",
+						"value": "cors"
+					},
+					{
+						"key": "sec-fetch-site",
+						"value": "same-origin"
+					},
+					{
+						"key": "user-agent",
+						"value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+					},
+					{
+						"key": "x-requested-with",
+						"value": "XMLHttpRequest"
+					}
+				],
+				"url": {
+					"raw": "https://anabin.kmk.org/index.php?eID=user_anabin_abschluesse&conf=abschluesse&uid=32120&_=1701189357619",
+					"protocol": "https",
+					"host": [
+						"anabin",
+						"kmk",
+						"org"
+					],
+					"path": [
+						"index.php"
+					],
+					"query": [
+						{
+							"key": "eID",
+							"value": "user_anabin_abschluesse"
+						},
+						{
+							"key": "conf",
+							"value": "abschluesse"
+						},
+						{
+							"key": "uid",
+							"value": "32120"
+						},
+						{
+							"key": "_",
+							"value": "1701189357619"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Anabin university detail call",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "authority",
+						"value": "anabin.kmk.org"
+					},
+					{
+						"key": "accept",
+						"value": "*/*"
+					},
+					{
+						"key": "accept-language",
+						"value": "en-IN,en;q=0.9,ur-IN;q=0.8,ur;q=0.7,en-GB;q=0.6,en-US;q=0.5"
+					},
+					{
+						"key": "referer",
+						"value": "https://anabin.kmk.org/no_cache/filter/institutionen.html"
+					},
+					{
+						"key": "sec-ch-ua",
+						"value": "\"Google Chrome\";v=\"119\", \"Chromium\";v=\"119\", \"Not?A_Brand\";v=\"24\""
+					},
+					{
+						"key": "sec-ch-ua-mobile",
+						"value": "?0"
+					},
+					{
+						"key": "sec-ch-ua-platform",
+						"value": "\"Windows\""
+					},
+					{
+						"key": "sec-fetch-dest",
+						"value": "empty"
+					},
+					{
+						"key": "sec-fetch-mode",
+						"value": "cors"
+					},
+					{
+						"key": "sec-fetch-site",
+						"value": "same-origin"
+					},
+					{
+						"key": "user-agent",
+						"value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+					},
+					{
+						"key": "x-requested-with",
+						"value": "XMLHttpRequest"
+					}
+				],
+				"url": {
+					"raw": "https://anabin.kmk.org/index.php?eID=user_anabin_institutionen&conf=institutionen&uid=37562&_=1701205133819",
+					"protocol": "https",
+					"host": [
+						"anabin",
+						"kmk",
+						"org"
+					],
+					"path": [
+						"index.php"
+					],
+					"query": [
+						{
+							"key": "eID",
+							"value": "user_anabin_institutionen"
+						},
+						{
+							"key": "conf",
+							"value": "institutionen"
+						},
+						{
+							"key": "uid",
+							"value": "37562"
+						},
+						{
+							"key": "_",
+							"value": "1701205133819"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Anabin degree type call",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "authority",
+						"value": "anabin.kmk.org"
+					},
+					{
+						"key": "accept",
+						"value": "application/json, text/javascript, */*; q=0.01"
+					},
+					{
+						"key": "accept-language",
+						"value": "en-US,en;q=0.9"
+					},
+					{
+						"key": "referer",
+						"value": "https://anabin.kmk.org/no_cache/filter/hochschulabschluesse.html"
+					},
+					{
+						"key": "sec-ch-ua",
+						"value": "\"Google Chrome\";v=\"119\", \"Chromium\";v=\"119\", \"Not?A_Brand\";v=\"24\""
+					},
+					{
+						"key": "sec-ch-ua-mobile",
+						"value": "?0"
+					},
+					{
+						"key": "sec-ch-ua-platform",
+						"value": "\"Linux\""
+					},
+					{
+						"key": "sec-fetch-dest",
+						"value": "empty"
+					},
+					{
+						"key": "sec-fetch-mode",
+						"value": "cors"
+					},
+					{
+						"key": "sec-fetch-site",
+						"value": "same-origin"
+					},
+					{
+						"key": "user-agent",
+						"value": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+					},
+					{
+						"key": "x-requested-with",
+						"value": "XMLHttpRequest"
+					}
+				],
+				"url": {
+					"raw": "https://anabin.kmk.org/index.php?eID=user_anabin_abschlusstyp&conf=abschlusstypergebnisliste&sEcho=3&iColumns=8&iDisplayStart=0&iDisplayLength=10&bRegex=false&sSearch_7=Afghanistan&iSortingCols=1&iSortCol_0=2&sSortDir_0=asc&land=225",
+					"protocol": "https",
+					"host": [
+						"anabin",
+						"kmk",
+						"org"
+					],
+					"path": [
+						"index.php"
+					],
+					"query": [
+						{
+							"key": "eID",
+							"value": "user_anabin_abschlusstyp"
+						},
+						{
+							"key": "conf",
+							"value": "abschlusstypergebnisliste"
+						},
+						{
+							"key": "sEcho",
+							"value": "3"
+						},
+						{
+							"key": "iColumns",
+							"value": "8"
+						},
+						{
+							"key": "iDisplayStart",
+							"value": "0"
+						},
+						{
+							"key": "iDisplayLength",
+							"value": "10"
+						},
+						{
+							"key": "bRegex",
+							"value": "false"
+						},
+						{
+							"key": "sSearch_7",
+							"value": "Afghanistan"
+						},
+						{
+							"key": "iSortingCols",
+							"value": "1"
+						},
+						{
+							"key": "iSortCol_0",
+							"value": "2"
+						},
+						{
+							"key": "sSortDir_0",
+							"value": "asc"
+						},
+						{
+							"key": "land",
+							"value": "225"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

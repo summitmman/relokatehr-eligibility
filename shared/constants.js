@@ -227,6 +227,21 @@ const anabinUniversityDetailQueryParams = {
 	// _: '1701205133819'
 };
 
+const anabinDegreeTypeParams = {
+	eID: 'user_anabin_abschlusstyp',
+	conf: 'abschlusstypergebnisliste',
+	sEcho: '1',
+	iColumns: '8',
+	iDisplayStart: '0',
+	iDisplayLength: pageSize,
+	bRegex: 'false',
+	// sSearch_7: 'Afghanistan',
+	iSortingCols: '1',
+	iSortCol_0: '2',
+	sSortDir_0: 'asc',
+	// land: '225',
+};
+
 module.exports = {
     countries,
 	pageSize,
@@ -234,5 +249,6 @@ module.exports = {
     anabinDegreeQueryParams,
 	anabinUniversityQueryParams,
 	anabinDegreeDetailQueryParams,
-	anabinUniversityDetailQueryParams
+	anabinUniversityDetailQueryParams,
+	anabinDegreeTypeParams
 };
