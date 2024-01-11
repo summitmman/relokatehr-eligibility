@@ -115,6 +115,14 @@
         .display-none {
             display: none;
         }
+        .display-block {
+            display: block;
+        }
+        .helperText {
+            font-size: 14px;
+            border: none;
+            background-color: transparent;
+        }
     </style>
 </head>
 <body>
@@ -365,6 +373,11 @@
                 radio: "radio",
                 paragraph: "paragraph"
             };
+            const componentSlots = {
+                [components.select]: {
+                    helperText: "helperText"
+                }
+            };
             const defaultSelectOption = {
                 label: 'Select an option',
                 value: undefined
@@ -393,25 +406,62 @@
             };
 
             // COMPONENTS
-            const createPrompt = (str, parent, type="success") => {
+            const createPrompt = ({ type = "success", ...props }, parent) => {
                 const prompt = createElement("div", parent);
                 prompt.setAttribute("role", "alert");
                 prompt.classList.add("alert", `alert-${type}`);
-                prompt.innerHTML = str;
+                prompt.innerHTML = props.text;
                 return prompt;
             };
-            const createButton = (str, events, parent) => {
+            const createButton = ({variant = "btn-primary", ...props}, events, parent) => {
                 const { onClick } = events;
                 const buttonEl = createElement("button", parent);
-                buttonEl.classList.add("btn", "btn-primary");
+                buttonEl.classList.add("btn", variant);
                 buttonEl.setAttribute("type", "button");
-                buttonEl.innerHTML = str;
+                buttonEl.innerHTML = props.text;
 
                 if (onClick) {
                     buttonEl.addEventListener('click', onClick);
                 }
 
                 return buttonEl;
+            };
+            const createModal = (props, slots, parent) => {
+                const divModal = createElement("div", parent);
+                divModal.setAttribute("id", props.id);
+                divModal.classList.add("modal", "fade");
+                divModal.setAttribute("tabindex", "-1");
+                divModal.setAttribute("aria-labelledby", `${props.id}Label`);
+                divModal.setAttribute("aria-hidden", "true");
+
+                const divModalDialog = createElement("div", divModal);
+                divModalDialog.classList.add("modal-dialog");
+
+                const divModalContent = createElement("div", divModalDialog);
+                divModalContent.classList.add("modal-content");
+
+                const divModalHeader = createElement("div", divModalContent);
+                divModalHeader.classList.add("modal-header");
+                const title = createElement("h1", divModalHeader);
+                title.setAttribute("id", `${props.id}Label`);
+                title.classList.add("modal-title", "fs-5");
+                title.innerHTML = props.title ?? "";
+                const close = createElement("button", divModalHeader);
+                close.setAttribute("type", "button");
+                close.classList.add("btn-close");
+                close.setAttribute("data-bs-dismiss", "modal");
+                close.setAttribute("aria-label", "Close");
+
+                const divModalBody = createElement("div", divModalContent);
+                divModalBody.classList.add("modal-body");
+                slots.body && slots.body(props, divModalBody);
+
+                // const divModalFooter = createElement("div", divModalContent);
+                // divModalFooter.classList.add("modal-footer");
+                // const buttonClose = createElement("button", divModalFooter);
+                // buttonClose.setAttribute("type", "button");
+                // buttonClose.classList.add("btn", "btn-primary");
+                // buttonClose.innerHTML = "Close";
             };
 
             // FORM COMPONENTS
@@ -558,8 +608,9 @@
                     onMounted();
                 }
             };
-            const createSelect = (item, events, value, parent) => {
+            const createSelect = (item, events, slots, value, parent) => {
                 const { onChange, onChangeOption = () => {} } = events;
+                const { helperText } = componentSlots[components.select];
                 const select = createElement("select", parent);
                 select.setAttribute("id", item.id);
                 select.classList.add('form-select');
@@ -574,6 +625,8 @@
                         onChange(select.value);
                     });
                 }
+
+                slots[helperText] && slots[helperText](item, value, parent);
                 
                 return select;
             };
@@ -616,6 +669,7 @@
             return {
                 // constants
                 components,
+                componentSlots,
                 // util
                 createElement,
                 populateSelectOptions,
@@ -627,7 +681,8 @@
                 createParagraph,
                 createSelect,
                 createSelectOptions,
-                createRadio
+                createRadio,
+                createModal
             };
         };
 
@@ -765,10 +820,12 @@
                 onOutputChange = (value, item, forms, output) => {}
             },
             output = {},
+            slots = {},
             app
         ) => {
             const {
                 components,
+                componentSlots,
                 createElement,
                 createText,
                 createParagraph,
@@ -901,7 +958,7 @@
                 onOutputChange(value, item, forms, output);
             };
 
-            const createInput = (item, parent) => {
+            const createInput = (item, slots = {}, parent) => {
                 const onLocalChange = (value) => {
                     onChange(value, item);
                 };
@@ -923,7 +980,13 @@
                                 item.props.options = [];
                             }
                         }
-                        return createSelect(item, { onChange: onLocalChange, onChangeOption: (optionItem) => { output[`${item.id}${idAppends.Option}`] = optionItem } }, output[item.id], parent);
+                        const mappedSlots = {};
+                        Object.keys(componentSlots[components.select] ?? {}).forEach((key) => {
+                            if (slots[`${item.id}${key}`]) {
+                                mappedSlots[key] = slots[`${item.id}${key}`];
+                            }
+                        });
+                        return createSelect(item, { onChange: onLocalChange, onChangeOption: (optionItem) => { output[`${item.id}${idAppends.Option}`] = optionItem } }, mappedSlots, output[item.id], parent);
                         break;
                     }
                     case components.radio: {
@@ -936,7 +999,7 @@
                     }
                 }
             };
-            const renderQuestion = (question, parent) => {
+            const renderQuestion = (question, slots = {}, parent) => {
                 const qParentDiv = createElement('div', parent);
                 qParentDiv.setAttribute("id", `${question.id}${idAppends.QuestionDiv}`);
                 qParentDiv.classList.add('mb-3');
@@ -945,23 +1008,20 @@
                 qDiv.classList.add('form-label');
                 qDiv.innerHTML = question.question;
 
-                const inputField = createInput(question, qParentDiv);
+                const inputField = createInput(question, slots, qParentDiv);
 
                 createValidationUI(question, inputField, qParentDiv);
 
-                if (question.prompt) {
-                    const promptEl = createPrompt(question.prompt, qParentDiv);
-                    promptEl.classList.add("form-prompt");
-                }
+                slots[`${question.id}Bottom`] && slots[`${question.id}Bottom`](question, qParentDiv);
 
                 return qParentDiv;
             };
-            const renderQuestions = ({ id, questions }, parent) => {
+            const renderQuestions = ({ id, questions }, slots, parent) => {
                 store.visibleOnMap = {};
                 const section = createElement('form', parent);
                 section.setAttribute("id", id);
                 questions.forEach((question) => {
-                    const quesDiv = renderQuestion(question, section);
+                    const quesDiv = renderQuestion(question, slots, section);
 
                     // handle generic visibility
                     if (question.visibleOn) {
@@ -1000,7 +1060,7 @@
                 stepTitle.innerHTML = form.name;
 
             };
-            const renderForm = (form, index, total) => {
+            const renderForm = (form, index, total, slots) => {
                 // reset
                 backSection.innerHTML = '';
                 stepSection.innerHTML = '';
@@ -1021,7 +1081,7 @@
                         onBack(() => {
                             if (index > 0) {
                                 index--;
-                                renderForm(forms[index], index, total);
+                                renderForm(forms[index], index, total, slots);
                             }
                         });
                     });
@@ -1037,7 +1097,7 @@
                     const title = createElement('h3', questionSection);
                     title.innerHTML = form.title;
 
-                    renderQuestions(form, questionSection);
+                    renderQuestions(form, slots, questionSection);
                     questionSection.classList.add('myfade-in');
                 }, animationTime);
 
@@ -1062,7 +1122,7 @@
                                 // navigation
                                 if (index < (total - 1)) {
                                     index++;
-                                    renderForm(forms[index], index, total);
+                                    renderForm(forms[index], index, total, slots);
                                 } else {
                                     onFinalSubmit({
                                         backSection,
@@ -1074,7 +1134,7 @@
                             });
                         }
                     };
-                    const submitBtn = createButton("Submit", { onClick }, submitSection);
+                    const submitBtn = createButton({ text: "Submit" }, { onClick }, submitSection);
                 }
             };
             const init = () => {
@@ -1089,7 +1149,7 @@
 
                 submitSection = createElement("div", app);
 
-                renderForm(forms[0], 0, forms.length);
+                renderForm(forms[0], 0, forms.length, slots);
             };
 
             return {
@@ -1106,8 +1166,11 @@
 
             const {
                 components,
+                componentSlots,
                 createElement,
-                populateSelectOptions
+                populateSelectOptions,
+                createPrompt,
+                createModal
             } = useComponents();
             const {
                 validators,
@@ -1137,156 +1200,156 @@
             };
 
             const forms = [
-                {
-                    id: "personalDetails",
-                    name: "Personal Details",
-                    title: "Personal Details",
-                    questions: [
-                        {
-                            id: "surname",
-                            question: "Surname",
-                            type: components.text,
-                            props: {
-                                placeholder: "Enter your surname",
-                                validations: [
-                                    { type: validators.required, message: 'Please enter your surname' },
-                                    { type: validators.onlyAlphabets, message: 'Numbers are not allowed' }
-                                ],
-                            }
-                        },
-                        {
-                            id: "givenName",
-                            question: "Given Name",
-                            type: components.text,
-                            props: {
-                                placeholder: "Enter your given name"
-                            }
-                        },
-                        {
-                            id: "nationality",
-                            question: "Nationality",
-                            type: components.text,
-                            props: {
-                                placeholder: "Select your nationality",
-                                validations: [
-                                    { type: validators.required, message: 'Please enter your nationality' }
-                                ],
-                            }
-                        },
-                        {
-                            id: "dualCitizenship",
-                            question: "Posesses Dual Citizenship",
-                            type: components.radio,
-                            props: {
-                                options: [
-                                    { label: "Yes", value: "Yes" },
-                                    { label: "No", value: "No" },
-                                ],
-                                validations: [
-                                    { type: validators.required, message: 'Please select an option' },
-                                ],
-                            }
-                        },
-                        {
-                            id: "citizenshipList",
-                            question: "If yes, please list",
-                            type: components.paragraph,
-                            props: {
-                                placeholder: "List of citizenships",
-                                validations: [
-                                    { type: validators.required, message: 'Please enter the list citizenships' }
-                                ],
-                            },
-                            visibleOn: {
-                                dualCitizenship: "Yes"
-                            }
-                        },
-                    ]
-                },
-                {
-                    id: "residenceDetails",
-                    name: "Residence Details",
-                    title: "Residence and travel information",
-                    questions: [
-                        {
-                            id: "duration",
-                            question: "Intended duration of residency in Germany",
-                            type: components.text,
-                            props: {
-                                placeholder: "in years"
-                            }
-                        },
-                        {
-                            id: "previousVisit",
-                            question: "Have you previously visited Germany?",
-                            type: components.radio,
-                            props: {
-                                options: [
-                                    { label: "Yes", value: "Yes" },
-                                    { label: "No", value: "No" },
-                                ]
-                            }
-                        },
-                        {
-                            id: "visitDates",
-                            question: "If yes, please list all dates",
-                            type: components.paragraph,
-                            props: {
-                                placeholder: "enter to and from dates on different lines"
-                            },
-                            visibleOn: {
-                                previousVisit: "Yes"
-                            }
-                        },
-                        {
-                            id: "currentResidence",
-                            question: "Current place of residence",
-                            type: components.text,
-                            props: {
-                                placeholder: "Current country and province/state"
-                            }
-                        },
-                    ]
-                },
-                {
-                    id: "professionalDetails",
-                    name: "Professional Details",
-                    title: "Professional background",
-                    questions: [
-                        {
-                            id: "purpose",
-                            question: "Purpose of your visit to Germany",
-                            type: components.text,
-                            props: {
-                                placeholder: "Enter the purpose"
-                            }
-                        },
-                        {
-                            id: "expertise",
-                            question: "Primary area of expertise",
-                            type: components.text,
-                            props: {
-                                placeholder: "industry or field"
-                            }
-                        },
-                        {
-                            id: "interestedPositions",
-                            question: "Positions you are interested in (list five)",
-                            type: components.paragraph,
-                            props: {
-                                placeholder: "list on different lines"
-                            }
-                        },
-                        {
-                            id: "experience",
-                            question: "Total professional experience",
-                            type: components.text,
-                            props: {
-                                placeholder: "in years"
-                            }
-                        },
-                    ]
-                },
+                // {
+                //     id: "personalDetails",
+                //     name: "Personal Details",
+                //     title: "Personal Details",
+                //     questions: [
+                //         {
+                //             id: "surname",
+                //             question: "Surname",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "Enter your surname",
+                //                 validations: [
+                //                     { type: validators.required, message: 'Please enter your surname' },
+                //                     { type: validators.onlyAlphabets, message: 'Numbers are not allowed' }
+                //                 ],
+                //             }
+                //         },
+                //         {
+                //             id: "givenName",
+                //             question: "Given Name",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "Enter your given name"
+                //             }
+                //         },
+                //         {
+                //             id: "nationality",
+                //             question: "Nationality",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "Select your nationality",
+                //                 validations: [
+                //                     { type: validators.required, message: 'Please enter your nationality' }
+                //                 ],
+                //             }
+                //         },
+                //         {
+                //             id: "dualCitizenship",
+                //             question: "Posesses Dual Citizenship",
+                //             type: components.radio,
+                //             props: {
+                //                 options: [
+                //                     { label: "Yes", value: "Yes" },
+                //                     { label: "No", value: "No" },
+                //                 ],
+                //                 validations: [
+                //                     { type: validators.required, message: 'Please select an option' },
+                //                 ],
+                //             }
+                //         },
+                //         {
+                //             id: "citizenshipList",
+                //             question: "If yes, please list",
+                //             type: components.paragraph,
+                //             props: {
+                //                 placeholder: "List of citizenships",
+                //                 validations: [
+                //                     { type: validators.required, message: 'Please enter the list citizenships' }
+                //                 ],
+                //             },
+                //             visibleOn: {
+                //                 dualCitizenship: "Yes"
+                //             }
+                //         },
+                //     ]
+                // },
+                // {
+                //     id: "residenceDetails",
+                //     name: "Residence Details",
+                //     title: "Residence and travel information",
+                //     questions: [
+                //         {
+                //             id: "duration",
+                //             question: "Intended duration of residency in Germany",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "in years"
+                //             }
+                //         },
+                //         {
+                //             id: "previousVisit",
+                //             question: "Have you previously visited Germany?",
+                //             type: components.radio,
+                //             props: {
+                //                 options: [
+                //                     { label: "Yes", value: "Yes" },
+                //                     { label: "No", value: "No" },
+                //                 ]
+                //             }
+                //         },
+                //         {
+                //             id: "visitDates",
+                //             question: "If yes, please list all dates",
+                //             type: components.paragraph,
+                //             props: {
+                //                 placeholder: "enter to and from dates on different lines"
+                //             },
+                //             visibleOn: {
+                //                 previousVisit: "Yes"
+                //             }
+                //         },
+                //         {
+                //             id: "currentResidence",
+                //             question: "Current place of residence",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "Current country and province/state"
+                //             }
+                //         },
+                //     ]
+                // },
+                // {
+                //     id: "professionalDetails",
+                //     name: "Professional Details",
+                //     title: "Professional background",
+                //     questions: [
+                //         {
+                //             id: "purpose",
+                //             question: "Purpose of your visit to Germany",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "Enter the purpose"
+                //             }
+                //         },
+                //         {
+                //             id: "expertise",
+                //             question: "Primary area of expertise",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "industry or field"
+                //             }
+                //         },
+                //         {
+                //             id: "interestedPositions",
+                //             question: "Positions you are interested in (list five)",
+                //             type: components.paragraph,
+                //             props: {
+                //                 placeholder: "list on different lines"
+                //             }
+                //         },
+                //         {
+                //             id: "experience",
+                //             question: "Total professional experience",
+                //             type: components.text,
+                //             props: {
+                //                 placeholder: "in years"
+                //             }
+                //         },
+                //     ]
+                // },
                 {
                     id: "educationDetails",
                     name: "Education Details",
@@ -1300,13 +1363,16 @@
                                 placeholder: "Select country",
                                 options: {
                                     fetchOptionsFn: services.getCountries,
-                                }
+                                },
+                                validations: [
+                                    // { type: validators.required, message: 'Please select a country' }
+                                ],
                             },
                             affects: [
                                 store.reservedKeys.educationLevel,
                                 store.reservedKeys.university,
                                 store.reservedKeys.degree
-                            ]
+                            ],
                         },
                         {
                             id: store.reservedKeys.educationLevel,
@@ -1324,8 +1390,11 @@
                                     callbackFn,
                                     stopPollingFn
                                 },
+                                validations: [
+                                    // { type: validators.required, message: 'Please select an education level' }
+                                ],
                             },
-                            affects: [store.reservedKeys.degree]
+                            affects: [store.reservedKeys.degree],
                         },
                         {
                             id: store.reservedKeys.university,
@@ -1342,6 +1411,13 @@
                                     callbackFn,
                                     stopPollingFn
                                 },
+                                validations: [
+                                    // { type: validators.required, message: 'Please select a university' }
+                                ],
+                            },
+                            extras: {
+                                text: "Unable to find your university? Click here",
+                                message: "It might not be listed right now"
                             }
                         },
                         {
@@ -1360,19 +1436,22 @@
                                     callbackFn,
                                     stopPollingFn
                                 },
+                                validations: [
+                                    // { type: validators.required, message: 'Please select a degree' }
+                                ],
                             }
                         },
-                        {
-                            id: "recognition",
-                            question: "Has your university degree been officially recognized in Germany?",
-                            type: components.radio,
-                            props: {
-                                options: [
-                                    { label: "Yes", value: "Yes" },
-                                    { label: "No", value: "No" },
-                                ]
-                            }
-                        },
+                        // {
+                        //     id: "recognition",
+                        //     question: "Has your university degree been officially recognized in Germany?",
+                        //     type: components.radio,
+                        //     props: {
+                        //         options: [
+                        //             { label: "Yes", value: "Yes" },
+                        //             { label: "No", value: "No" },
+                        //         ]
+                        //     }
+                        // },
                     ]
                 },
                 {
@@ -1388,7 +1467,10 @@
                                 options: [
                                     { label: "Yes", value: "Yes" },
                                     { label: "No", value: "No" },
-                                ]
+                                ],
+                                validations: [
+                                    { type: validators.required, message: 'Please either of the options' }
+                                ],
                             }
                         },
                         {
@@ -1396,7 +1478,10 @@
                             question: "If yes, list company name and contact person",
                             type: components.paragraph,
                             props: {
-                                placeholder: "Enter on different lines"
+                                placeholder: "Enter on different lines",
+                                validations: [
+                                    { type: validators.required, message: 'Please enter the required information' }
+                                ],
                             },
                             visibleOn: {
                                 germanEmployment: "Yes"
@@ -1405,14 +1490,19 @@
                         {
                             id: "expectedIncome",
                             question: "Anticipated Gross Income for the Intended Job",
-                            prompt: `
-                                For IT professionals and bottleneck professions - eligible
-                                For Blue card if salary is €39,682.80 or above - eligible
-                                For other regular occupations they are eligible for Blue Card if salary is €43,800 or above - eligible
-                            `,
                             type: components.text,
                             props: {
                                 placeholder: "enter amount as per annum",
+                                validations: [
+                                    { type: validators.required, message: 'Please either an amount' }
+                                ],
+                            },
+                            extras: {
+                                prompt: `
+                                    For IT professionals and bottleneck professions - eligible
+                                    For Blue card if salary is €39,682.80 or above - eligible
+                                    For other regular occupations they are eligible for Blue Card if salary is €43,800 or above - eligible
+                                `,
                             }
                         }
                     ]
@@ -1437,6 +1527,31 @@
                 questionSection.innerHTML = 'Thank you for filling the survey';
                 submitSection.innerHTML = '';
             };
+            const slots = {
+                expectedIncomeBottom: (question, parent) => {
+                    const promptEl = createPrompt({ text: question.extras.prompt }, parent);
+                    promptEl.classList.add("form-prompt");
+                },
+                [
+                    `${store.reservedKeys.university}${componentSlots[components.select].helperText}`
+                ]: (item, value, parent) => {
+
+                    const anchor = createElement("button", parent);
+                    anchor.innerHTML = item.extras.text;
+                    anchor.classList.add("helperText", "link-primary");
+                    anchor.setAttribute("type", "button");
+                    anchor.setAttribute("data-bs-toggle", "modal");
+                    anchor.setAttribute("data-bs-target", "#universityMessage");
+
+                    createModal({id: 'universityMessage'}, {
+                        body: (props, parent) => {
+                            const div = createElement("div", parent);
+                            div.setAttribute("style", "padding: 15px");
+                            div.innerHTML = item.extras.message;
+                        }
+                    }, parent);
+                }
+            };
 
             const {
                 init
@@ -1448,11 +1563,13 @@
                     onFinalSubmit,
                 },
                 output,
+                slots,
                 app,
             );
             init();
 
         })();
     </script>
+
 </body>
 </html>
