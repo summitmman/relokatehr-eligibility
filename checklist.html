@@ -106,6 +106,12 @@
         .margin-top-20 {
             margin-top: 20px;
         }
+        .margin-top-50 {
+            margin-top: 50px;
+        }
+        .text-align-center {
+            text-align: center;
+        }
         .form-prompt {
             margin-top: 15px;
         }
@@ -146,9 +152,11 @@
         };
 
         const useServices = () => {
+            // const domain = "http://localhost:3000";
+            const domain = "https://backend-staging.relokatehr.com/api";
             // API calls
             const getCountries = () => {
-                return fetch("http://localhost:3000/countries")
+                return fetch(`${domain}/countries`)
                     .then((response) => response.json())
                     .then((response) => {
                         return response;
@@ -159,7 +167,7 @@
                     return Promise.reject("Mandatory params not available");
                 }
                 params.start = params.start ?? 0;
-                const url = 'http://localhost:3000/universities';
+                const url = `${domain}/universities`;
                 let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&start=${params.start}`;
                 return fetch(`${url}${query}`)
                     .then((response) => response.json())
@@ -172,7 +180,7 @@
                     return Promise.reject("Mandatory params not available");
                 }
                 params.start = params.start ?? 0;
-                const url = 'http://localhost:3000/degrees';
+                const url = `${domain}/degrees`;
                 let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&degreeTypeId=${params.degreeTypeId}&start=${params.start}`;
                 return fetch(`${url}${query}`)
                     .then((response) => response.json())
@@ -185,8 +193,40 @@
                     return Promise.reject("Mandatory params not available");
                 }
                 params.start = params.start ?? 0;
-                const url = 'http://localhost:3000/degreeTypes';
+                const url = `${domain}/degreeTypes`;
                 let query = `?pageSize=${params.pageSize}&countryCode=${params.countryCode}&country=${params.country}&start=${params.start}`;
+                return fetch(`${url}${query}`)
+                    .then((response) => response.json())
+                    .then((response) => {
+                        return response;
+                    });
+            };
+            const getDegreeRecognition = (result) => {
+                if (!result || !Object.keys(result).length) {
+                    return Promise.reject("Empty form");
+                }
+                if (result.degreeId == null) {
+                    return Promise.reject("Mandatory params are not available");
+                }
+                
+                const url = `${domain}/degreeRecognition`;
+                let query = `?degreeId=${result.degreeId}`;
+                return fetch(`${url}${query}`)
+                    .then((response) => response.json())
+                    .then((response) => {
+                        return response;
+                    });
+            };
+            const getUniversityRecognition = (result) => {
+                if (!result || !Object.keys(result).length) {
+                    return Promise.reject("Empty form");
+                }
+                if (result.universityId == null) {
+                    return Promise.reject("Mandatory params are not available");
+                }
+                
+                const url = `${domain}/universityRecognition`;
+                let query = `?universityId=${result.universityId}`;
                 return fetch(`${url}${query}`)
                     .then((response) => response.json())
                     .then((response) => {
@@ -200,7 +240,9 @@
                 getCountries: "getCountries",
                 getUniversities: "getUniversities",
                 getDegrees: "getDegrees",
-                getDegreeTypes: "getDegreeTypes"
+                getDegreeTypes: "getDegreeTypes",
+                getDegreeRecognition: "getDegreeRecognition",
+                getUniversityRecognition: "getUniversityRecognition"
             };
             const serviceHelpers = {
                 [services.getCountries]: () => {
@@ -353,6 +395,18 @@
                             return response;
                         });
                 },
+                [services.getDegreeRecognition]: (result) => {
+                    if (result)
+                        result.degreeId = result[`${store.reservedKeys.degree}${idAppends.Option}`]?.value;
+
+                    return getDegreeRecognition(result);
+                },
+                [services.getUniversityRecognition]: (result) => {
+                    if (result)
+                        result.universityId = result[`${store.reservedKeys.university}${idAppends.Option}`]?.value;
+
+                    return getUniversityRecognition(result);
+                }
             };
 
             return {
@@ -361,7 +415,9 @@
                 getCountries,
                 getUniversities,
                 getDegrees,
-                getDegreeTypes
+                getDegreeTypes,
+                getDegreeRecognition,
+                getUniversityRecognition
             };
         };
 
@@ -1176,7 +1232,7 @@
                 validators,
                 isValid
             } = useValidations();
-            const { services } = useServices();
+            const { services, serviceHelpers } = useServices();
 
             const callbackFn = (response) => response.data;
             const stopPollingFn = (response, localParams = {}) => {
@@ -1497,18 +1553,26 @@
                                     { type: validators.required, message: 'Please either an amount' }
                                 ],
                             },
-                            extras: {
-                                prompt: `
-                                    For IT professionals and bottleneck professions - eligible
-                                    For Blue card if salary is €39,682.80 or above - eligible
-                                    For other regular occupations they are eligible for Blue Card if salary is €43,800 or above - eligible
-                                `,
-                            }
+                            // extras: {
+                            //     prompt: `
+                            //         For IT professionals and bottleneck professions - eligible
+                            //         For Blue card if salary is €39,682.80 or above - eligible
+                            //         For other regular occupations they are eligible for Blue Card if salary is €43,800 or above - eligible
+                            //     `,
+                            // }
                         }
                     ]
                 },
             ];
             const output = {};
+            
+            const spinner = (parent) => {
+                const wrapper = createElement("div", parent);
+                wrapper.classList.add("lds-ellipsis");
+                createElement("div", wrapper);
+                createElement("div", wrapper);
+                createElement("div", wrapper);
+            };
 
             const onSubmit = (form, output, next) => {
                 next();
@@ -1516,22 +1580,59 @@
             const onBack = (next) => {
                 next();
             };
-            const onFinalSubmit = ({
-                backSection,
-                stepSection,
-                questionSection,
-                submitSection
-            }) => {
-                backSection.innerHTML = '';
-                stepSection.innerHTML = '';
-                questionSection.innerHTML = 'Thank you for filling the survey';
-                submitSection.innerHTML = '';
+            const onFinalSubmit = async () => {
+                app.innerHTML = "";
+                spinner(app);
+
+                const isDegreeRecognized = serviceHelpers[services.getDegreeRecognition](output);
+                const isUniversityRecognized = serviceHelpers[services.getUniversityRecognition](output);
+                const result = await Promise.all([isDegreeRecognized, isUniversityRecognized]);
+
+                app.innerHTML = "";
+                const resultDiv = createElement("div", app);
+                resultDiv.classList.add("margin-top-50");
+                if (result[0] && result[1]) {
+                    const h1 = createElement("h1", resultDiv);
+                    h1.innerHTML = "Congratulations!!"
+                    h1.classList.add("text-align-center");
+
+                    const p = createElement("p", resultDiv);
+                    p.innerHTML = "Your university and your degree are officially recognised in Germany. Based on the information of your educational background you have provided us you may be eligible for a working visa (Blue Card) in Germany. Please be aware that this information is provided for informational purposes only and is not intended as legal advice. The final  decision rests with the relevant German authorities. For additional assistance with your relocation, your employer can contact us at hello@relokatehr.com. To learn more about different working visas for Germany, please visit ";
+                    
+                    const makeItInGermanyAnchor = createElement("a", p);
+                    makeItInGermanyAnchor.innerHTML = "Make it in Germany";
+                    makeItInGermanyAnchor.href = "https://www.make-it-in-germany.com/en/visa-residence/types";
+
+                    p.innerHTML += ".";
+                } else {
+                    const p = createElement("p", resultDiv);
+                    p.innerHTML = "Regrettably, your degree or university is not currently listed as recognized in Germany. Nevertheless, there's no need to worry. If you are an IT professional and can prove a minimum of three years of equivalent professional experience, coupled with an annual salary of at least €41,041.80 (as of 2024), you may still qualify for a working visa (Blue Card). For individuals in other professions, we recommend pursuing the recognition of your degree by the ";
+
+                    const centralOfficeAnchor = createElement("a", p);
+                    centralOfficeAnchor.innerHTML = "Central Office for Foreign Education (ZAB)";
+                    centralOfficeAnchor.href = "https://www.kmk.org/zab/central-office-for-foreign-education.html";
+
+                    p.innerHTML += "to potentially meet the criteria for a working visa (Blue Card). For detailed information on the recognition process, please visit our ";
+
+                    const relocationGuideAnchor = createElement("a", p);
+                    relocationGuideAnchor.innerHTML = "relocation guide";
+                    relocationGuideAnchor.href = "https://relokate.notion.site/Degree-recognition-676e5b4529c54b5497e2c63f44810e30";
+
+                    p.innerHTML += ". Please be aware that this information is provided for informational purposes only and is not intended as legal advice. The final decision rests with the relevant German authorities. For more information please refer to the ";
+                    
+                    const officialAuthorityAnchor = createElement("a", p);
+                    officialAuthorityAnchor.innerHTML = "official authority website";
+                    officialAuthorityAnchor.href = "https://www.make-it-in-germany.com/en/working-in-germany/recognition/academic-qualifications";
+
+                    p.innerHTML += ".";
+                }
+
             };
             const slots = {
-                expectedIncomeBottom: (question, parent) => {
-                    const promptEl = createPrompt({ text: question.extras.prompt }, parent);
-                    promptEl.classList.add("form-prompt");
-                },
+                // expectedIncomeBottom: (question, parent) => {
+                //     const promptEl = createPrompt({ text: question.extras.prompt }, parent);
+                //     promptEl.classList.add("form-prompt");
+                // },
                 [
                     `${store.reservedKeys.university}${componentSlots[components.select].helperText}`
                 ]: (item, value, parent) => {

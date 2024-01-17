@@ -1,5 +1,5 @@
 {
     "scripts": {
-        "serve": "google-chrome ./checklist.html && node app"
+        "serve": "google-chrome ./checklist.html --disable-gpu && node app"
     }
 }
